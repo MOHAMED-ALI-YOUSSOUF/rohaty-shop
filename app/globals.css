@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+/* ─── DESIGN SYSTEM — Rohaty Shop ─────────────────────────────────────────── */
+
+@theme inline {
+  /* Fonts */
+  --font-heading: var(--font-space-grotesk);
+  --font-body:    var(--font-inter);
+  --font-sans:    var(--font-inter);
+
+  /* Background colors */
+  --color-bg-base:    #0F172A;
+  --color-bg-surface: #1E293B;
+  --color-bg-input:   #162032;
+  --color-bg-muted:   #0D1526;
+
+  /* Brand colors */
+  --color-primary:   #2563EB;
+  --color-secondary: #06B6D4;
+  --color-accent:    #8B5CF6;
+  --color-success:   #10B981;
+  --color-warning:   #F59E0B;
+  --color-danger:    #EF4444;
+
+  /* Text colors */
+  --color-text-primary:   #FFFFFF;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #475569;
+
+  /* Border */
+  --color-border:       rgba(255,255,255,0.08);
+  --color-border-focus: rgba(37,99,235,0.5);
+}
+
+/* ─── BASE STYLES ──────────────────────────────────────────────────────────── */
+
+:root {
+  --background: #0F172A;
+  --foreground: #FFFFFF;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ─── UTILITY CLASSES ──────────────────────────────────────────────────────── */
+
+/* Gradient text bleu-cyan */
+.gradient-text {
+  background: linear-gradient(135deg, #2563EB, #06B6D4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient text violet-bleu */
+.gradient-text-purple {
+  background: linear-gradient(135deg, #8B5CF6, #2563EB);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Underline gradient animé sous les titres H2 */
+.title-underline::after {
+  content: '';
+  display: block;
+  height: 3px;
+  width: 56px;
+  margin-top: 12px;
+  background: linear-gradient(90deg, #2563EB, #06B6D4);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.title-underline.in-view::after {
+  transform: scaleX(1);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Gradient border glow au hover */
+.card-glow {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.card-glow:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2), 0 16px 48px rgba(37, 99, 235, 0.15);
+}
+
+/* Pulse WhatsApp */
+@keyframes whatsapp-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50%       { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+.whatsapp-pulse {
+  animation: whatsapp-pulse 2.5s ease-in-out infinite;
+}
+
+/* Gradient backgrounds */
+.gradient-bg-blue {
+  background: linear-gradient(135deg, #2563EB, #06B6D4);
+}
+.gradient-bg-purple {
+  background: linear-gradient(135deg, #8B5CF6, #2563EB);
+}
+.gradient-bg-success {
+  background: linear-gradient(135deg, #10B981, #06B6D4);
+}
+
+/* Gradient border */
+.gradient-border {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #2563EB, #06B6D4);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563EB;
+}
+
+/* Input focus ring */
+.input-focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Page fade-in animation */
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.page-enter {
+  animation: page-fade-in 0.35s ease forwards;
+}

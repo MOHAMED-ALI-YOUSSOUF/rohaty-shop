@@ -1,0 +1,24 @@
+// lib/supabase/server.ts — server client (use in Server Components / Route Handlers)
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        // En Server Component, Next interdit la modification des cookies.
+        // Pour les fetch vitrine/données lecture seule, un no-op suffit.
+        setAll() {
+          // no-op
+        },
+      },
+    }
+  )
+}
