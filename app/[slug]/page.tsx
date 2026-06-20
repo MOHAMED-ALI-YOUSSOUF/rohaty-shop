@@ -12,6 +12,73 @@ interface StorefrontPageProps {
   searchParams: Promise<{ category?: string }>
 }
 
+import type { Metadata } from "next";
+
+interface MetadataProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: MetadataProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  const { data: store } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!store) {
+    return {
+      title: "Boutique introuvable",
+    };
+  }
+
+  const image =
+    store.cover_image ||
+    store.logo_url ||
+    "https://shop.rohaty.com/logo.png";
+
+  return {
+    title: `${store.name} | Rohaty Shop`,
+    description:
+      store.description ||
+      `Découvrez les produits de ${store.name}`,
+
+    openGraph: {
+      title: store.name,
+      description:
+        store.description ||
+        `Découvrez les produits de ${store.name}`,
+      url: `https://shop.rohaty.com/${store.slug}`,
+      siteName: "Rohaty Shop",
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: store.name,
+        },
+      ],
+      locale: "fr_FR",
+      type: "website",
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title: store.name,
+      description:
+        store.description ||
+        `Découvrez les produits de ${store.name}`,
+      images: [image],
+    },
+  };
+}
+
+
+
 export default async function StorefrontPage({ params, searchParams }: StorefrontPageProps) {
   const { slug } = await params
   const { category } = await searchParams

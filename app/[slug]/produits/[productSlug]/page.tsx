@@ -8,6 +8,7 @@ import { ProductGrid } from '@/components/storefront/ProductGrid'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { GradientButton } from '@/components/shared/GradientButton'
 import { ChevronRight, ShoppingBag, Info } from 'lucide-react'
+import { Metadata } from 'next'
 
 interface ProductPageProps {
   params: Promise<{
@@ -15,6 +16,90 @@ interface ProductPageProps {
     productSlug: string
   }>
 }
+
+interface MetadataProps {
+  params: Promise<{
+    slug: string;
+    productSlug: string;
+  }>;
+}
+
+export async function generateMetadata({
+  params,
+}: MetadataProps): Promise<Metadata> {
+  const { slug, productSlug } = await params;
+
+  const supabase = await createClient();
+
+  const { data: store } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!store) {
+    return {
+      title: "Produit introuvable",
+    };
+  }
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("*")
+    .eq("store_id", store.id)
+    .eq("slug", productSlug)
+    .eq("is_published", true)
+    .maybeSingle();
+
+  if (!product) {
+    return {
+      title: "Produit introuvable",
+    };
+  }
+
+  const image =
+    product.image_url ||
+    store.cover_image ||
+    store.logo_url ||
+    "https://shop.rohaty.com/logo.png";
+
+  const title = `${product.name} • ${new Intl.NumberFormat(
+    "fr-FR"
+  ).format(product.price)} DJF`;
+
+  const description =
+    product.description ||
+    `Découvrez ${product.name} chez ${store.name}`;
+
+  return {
+    title,
+    description,
+
+    openGraph: {
+      title,
+      description,
+      url: `https://shop.rohaty.com/${slug}/produits/${productSlug}`,
+      siteName: "Rohaty Shop",
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 1200,
+          alt: product.name,
+        },
+      ],
+      type: "website",
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
+
 
 export default async function PublicProductPage({ params }: ProductPageProps) {
   const { slug, productSlug } = await params

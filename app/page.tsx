@@ -12,16 +12,15 @@ import {
   Palette,
   MessageSquare,
   Check,
-  ArrowRight,
   Star,
-  CheckCircle,
-  Laptop,
-  Flame,
+  User,
 } from 'lucide-react'
 import { GradientButton } from '@/components/shared/GradientButton'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { SectionTitle } from '@/components/shared/SectionTitle'
 import { fadeUp, fadeIn, stagger, zoomIn } from '@/lib/animations'
+import Image from 'next/image'
+import { SiteHeader } from '@/components/shared/SiteHeader'
 
 export default function LandingPage() {
   const steps = [
@@ -76,16 +75,28 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-bg-base text-white flex flex-col overflow-x-hidden font-sans">
+    <div className="relative min-h-screen overflow-x-hidden">
+      {/* Decorative background orbs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="bg-orb-blue absolute -top-40 -left-32 size-[600px] blur-3xl opacity-60" />
+        <div className="bg-orb-purple absolute top-[40%] -right-40 size-[500px] blur-3xl opacity-50" />
+        <div className="bg-orb-cyan absolute top-[120%] left-1/3 size-[500px] blur-3xl opacity-40" />
+      </div>
+
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 glass border-b border-white/5 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="p-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-white shadow-md">
-              <ShoppingBag className="w-5 h-5" />
+            <span>
+              <Image
+                src="/logo.png"
+                alt="Rohaty Shop Logo"
+                width={40}
+                height={40}
+              />
             </span>
-            <span className="font-heading font-extrabold text-lg tracking-wider text-white">
+            <span className="hidde md:block font-heading font-extrabold text-lg tracking-wider text-white">
               ROHATY <span className="gradient-text">SHOP</span>
             </span>
           </Link>
@@ -94,17 +105,20 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/connexion"
-              className="text-xs sm:text-sm font-semibold text-text-secondary hover:text-white transition-colors"
+              className=" flex gap-2 text-xs sm:text-sm   font-semibold text-text-secondary hover:text-white transition-colors"
             >
-              Connexion
+              <span className='hidden md:block'>
+                Connexion
+              </span>
+              <User />
             </Link>
-            <GradientButton
+            {/* <GradientButton
               variant="primary"
               href="/inscription"
               className="py-2 px-4 text-xs sm:text-sm font-bold shadow-sm"
             >
               Créer ma boutique →
-            </GradientButton>
+            </GradientButton> */}
           </div>
         </div>
       </header>
@@ -203,51 +217,28 @@ export default function LandingPage() {
           </div>
 
           {/* Hero Visual Mockup */}
-          <div className="lg:col-span-6 flex justify-center relative">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={zoomIn}
-              className="relative w-full max-w-[480px] aspect-[4/3] rounded-2xl border border-white/15 bg-bg-surface overflow-hidden shadow-2xl"
-            >
-              {/* Mockup Dashboard browser */}
-              <div className="bg-bg-surface border-b border-white/5 px-4 py-3 flex items-center gap-1.5 text-xs select-none">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                <div className="bg-bg-input rounded px-3 py-0.5 text-[10px] text-text-secondary font-mono mx-auto select-none">
-                  shop.rohaty.com/dashboard
-                </div>
-              </div>
-              <div className="p-4 space-y-4">
-                <div className="h-6 w-32 bg-white/5 rounded" />
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="h-16 bg-white/5 rounded-lg border border-white/5" />
-                  <div className="h-16 bg-white/5 rounded-lg border border-white/5" />
-                  <div className="h-16 bg-white/5 rounded-lg border border-white/5" />
-                </div>
-                <div className="h-24 bg-white/5 rounded-lg border border-white/5" />
-              </div>
 
-              {/* Mockup Storefront overlapping Phone */}
-              <div className="absolute right-6 bottom-[-20px] w-[180px] h-[280px] rounded-t-3xl border border-white/20 bg-bg-base overflow-hidden shadow-2xl flex flex-col z-20 select-none">
-                <div className="bg-bg-surface py-2.5 border-b border-white/5 flex justify-center">
-                  <span className="w-12 h-3.5 rounded-full bg-black/60" />
-                </div>
-                <div className="h-10 bg-gradient-to-r from-primary to-secondary opacity-60" />
-                <div className="p-3 space-y-2">
-                  <div className="w-8 h-8 rounded bg-bg-surface border border-white/5 -mt-6" />
-                  <div className="h-3 w-16 bg-white/10 rounded" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="aspect-square bg-white/5 rounded-lg border border-white/5" />
-                    <div className="aspect-square bg-white/5 rounded-lg border border-white/5" />
-                  </div>
-                </div>
-              </div>
+          <div className='lg:col-span-6 space-y-8 text-cente flex items-cente justify-cente' >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="relative animate-float"
+            >
+              <div className="absolute -inset-6 bg-gradient-hero opacity-30 blur-3xl rounded-[3rem]" />
+              <img
+                src="/hero-mobile.jpg"
+                alt="Smartphone affichant une boutique Rohaty Shop"
+                width={1536}
+                height={1280}
+                className="relative w-full rounded-3xl shadow-glow-purple"
+              />
             </motion.div>
           </div>
         </div>
+
       </section>
+
 
       {/* How it works Section */}
       <section

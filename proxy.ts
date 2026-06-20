@@ -24,7 +24,7 @@ export function proxy(request: NextRequest) {
 
     if (!token) {
       const url = request.nextUrl.clone()
-      url.pathname = '/login'
+      url.pathname = '/connexion'
       return NextResponse.redirect(url)
     }
   }
