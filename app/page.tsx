@@ -105,26 +105,26 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/connexion"
-              className=" flex gap-2 text-xs sm:text-sm   font-semibold text-text-secondary hover:text-white transition-colors"
+              className=" flex items-center gap-2 text-xs sm:text-sm   font-semibold text-text-secondary hover:text-white transition-colors"
             >
+              <User />
               <span className='hidden md:block'>
                 Connexion
               </span>
-              <User />
             </Link>
-            {/* <GradientButton
+            <GradientButton
               variant="primary"
               href="/inscription"
-              className="py-2 px-4 text-xs sm:text-sm font-bold shadow-sm"
+              className="py-2 px-4 text-xs sm:text-sm font-bold shadow-sm hidden lg:block"
             >
               Créer ma boutique →
-            </GradientButton> */}
+            </GradientButton>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-10 pb-20 md:py-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-10 pb-20  max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="absolute top-1/2 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-secondary/10 blur-3xl pointer-events-none" />
@@ -389,7 +389,7 @@ export default function LandingPage() {
                     <p className="text-xs text-text-secondary mt-1">Pour les commerçants sérieux</p>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black font-heading text-white">5 000</span>
+                    <span className="text-4xl font-black font-heading text-white">9 900</span>
                     <span className="text-sm font-semibold text-text-secondary uppercase">
                       DJF / mois
                     </span>
@@ -463,8 +463,13 @@ export default function LandingPage() {
       <footer className="border-t border-white/5 bg-bg-muted/50 py-12 select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-md bg-gradient-to-r from-primary to-secondary text-white">
-              <ShoppingBag className="w-4 h-4" />
+            <span>
+              <Image
+                src="/logo.png"
+                alt="Rohaty Shop Logo"
+                width={28}
+                height={28}
+              />
             </span>
             <span className="font-heading font-extrabold text-sm tracking-wider text-white">
               ROHATY <span className="gradient-text">SHOP</span>

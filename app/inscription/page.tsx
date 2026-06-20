@@ -135,12 +135,12 @@ export default function InscriptionPage() {
           <form onSubmit={step1Form.handleSubmit(onStep1Submit)} className="space-y-6">
             <div>
               <label className="block text-sm mb-2">Nom complet</label>
-              <input {...step1Form.register('full_name')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary" placeholder="Jean Dupont" />
+              <input {...step1Form.register('full_name')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary" placeholder="Ex : Mohamed Ali Youssouf" />
             </div>
 
             <div>
               <label className="block text-sm mb-2">Email</label>
-              <input type="email" {...step1Form.register('email')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary" placeholder="jean@exemple.com" />
+              <input type="email" {...step1Form.register('email')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary" placeholder="Ex : wizzimed@exemple.com" />
             </div>
 
             <div>
@@ -156,14 +156,14 @@ export default function InscriptionPage() {
           <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-6">
             <div>
               <label className="block text-sm mb-2">Nom de la boutique</label>
-              <input {...step2Form.register('store_name')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3" placeholder="Ma Boutique" />
+              <input {...step2Form.register('store_name')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3" placeholder="Ex : Hafsa Fashion" />
             </div>
 
             <div>
               <label className="block text-sm mb-2">URL de votre boutique</label>
               <div className="flex">
                 <div className="bg-bg-surface px-4 py-3 rounded-l-lg border border-r-0 border-white/10 text-text-secondary">shop.rohaty.com/</div>
-                <input {...step2Form.register('slug')} className="flex-1 bg-bg-input border border-white/10 rounded-r-lg px-4 py-3" placeholder="ma-boutique" />
+                <input {...step2Form.register('slug')} className="flex-1 bg-bg-input border border-white/10 rounded-r-lg px-4 py-3" placeholder="hafsa-fashion" />
               </div>
 
               {checkingSlug && <p className="text-sm text-text-secondary mt-1">Vérification...</p>}
@@ -181,7 +181,7 @@ export default function InscriptionPage() {
 
             <div>
               <label className="block text-sm mb-2">Numéro WhatsApp</label>
-              <input {...step2Form.register('whatsapp')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3" placeholder="+25377196132" />
+              <input {...step2Form.register('whatsapp')} className="w-full bg-bg-input border border-white/10 rounded-lg px-4 py-3" placeholder="Ex : +25377196132" />
             </div>
 
             {error && <p className="text-danger text-sm">{error}</p>}
