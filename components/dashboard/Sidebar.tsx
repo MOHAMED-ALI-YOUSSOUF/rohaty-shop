@@ -54,7 +54,7 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
   const storeUrl = `/${storeSlug}`
 
   return (
-    <div className={cn('flex flex-col h-[100vh] bg-bg-surface border-r border-white/5 w-[240px]', className)}>
+    <div className={cn('flex flex-col h-screen bg-bg-surface border-r border-white/5 w-[240px]', className)}>
       {/* Header (Logo + Store Name) */}
       <div className="p-6 border-b border-white/5">
         <Link href="/dashboard" className="font-heading text-xl font-extrabold tracking-tight block mb-4">

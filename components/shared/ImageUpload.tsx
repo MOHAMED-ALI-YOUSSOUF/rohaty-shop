@@ -1,7 +1,7 @@
 // components/shared/ImageUpload.tsx
 'use client'
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react'
+import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react'
 import { UploadCloud, Loader2, Image as ImageIcon, Trash2, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
@@ -34,6 +34,13 @@ export function ImageUpload({
     setPreview(currentUrl)
   }
 
+  useEffect(() => {
+    return () => {
+      if (preview?.startsWith('blob:')) {
+        URL.revokeObjectURL(preview)
+      }
+    }
+  }, [preview])
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
@@ -45,6 +52,8 @@ export function ImageUpload({
   }
 
   const uploadFile = async (file: File) => {
+    if (loading) return
+    if (!file) return
     // S'assurer que c'est bien une image
     if (!file.type.startsWith('image/')) {
       setError('Veuillez sélectionner un fichier image valide.')
@@ -65,33 +74,26 @@ export function ImageUpload({
     setPreview(objectUrl)
 
     try {
-      // Lire le fichier comme base64
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onloadend = async () => {
-        const base64data = reader.result as string
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', folder)
 
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            file: base64data,
-            folder,
-          }),
-        })
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
 
-        const data = await response.json()
+      })
 
-        if (!response.ok) {
-          throw new Error(data.error || "Erreur lors de l'upload")
-        }
+      const data = await response.json()
 
-        onUpload(data.url)
-        setPreview(data.url)
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors de l'upload")
       }
-    } catch (err: any) {
+
+      onUpload(data.url)
+      setPreview(data.url)
+    }
+    catch (err: any) {
       console.error(err)
       setError(err.message || "Impossible d'uploader l'image")
       // Annuler la preview locale en cas d'erreur

@@ -16,11 +16,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Parser le body de la requête
-    const { file, folder } = await request.json()
+    const formData = await request.formData()
+
+    const file = formData.get('file') as File
+    const folder = formData.get('folder') as string
 
     if (!file || !folder) {
       return NextResponse.json({ error: 'Fichier et dossier requis' }, { status: 400 })
     }
+
 
     // Validation simple du dossier pour s'assurer que c'est un dossier autorisé de Rohaty Shop
     const allowedFolders = [
