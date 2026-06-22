@@ -7,13 +7,15 @@
 export function buildWhatsAppUrl(
   productName: string,
   productPrice: number,
-  whatsappNumber: string
+  whatsappNumber: string,
+  productUrl: string
 ): string {
   const message = encodeURIComponent(
     `Bonjour ! Je souhaite commander :\n\n` +
-    `🛍️ *${productName}*\n` +
-    `💰 Prix : ${productPrice} DJF\n\n` +
-    `Merci de confirmer la disponibilité.`
+    `🛍️ ${productName}\n` +
+    `💰 Prix : ${productPrice} DJF\n` +
+    (productUrl ? `🔗 Produit : ${productUrl}\n` : '') +
+    `\nMerci de confirmer la disponibilité.`
   )
   const number = whatsappNumber.replace(/\D/g, '') // strip non-digits (removes leading +)
   return `https://wa.me/${number}?text=${message}`

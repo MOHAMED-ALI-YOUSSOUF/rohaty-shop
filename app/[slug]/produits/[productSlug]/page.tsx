@@ -123,7 +123,7 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
   const discountPct = hasDiscount
     ? Math.round((1 - product.price / product.list_price) * 100)
     : 0
-  const whatsappOrderUrl = buildWhatsAppUrl(product.name, product.price, store.whatsapp)
+  const whatsappOrderUrl = buildWhatsAppUrl(product.name, product.price, store.whatsapp, `https://shop.rohaty.com/${store.slug}/produits/${product.slug}`)
   const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR').format(price)
 
   return (

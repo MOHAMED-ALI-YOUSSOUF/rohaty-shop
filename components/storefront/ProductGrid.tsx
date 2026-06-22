@@ -40,7 +40,7 @@ export function ProductGrid({
                 <ProductCard
                     key={product.id}
                     product={product}
-                    whatsappUrl={buildWhatsAppUrl(product.name, product.price, storeWhatsapp)}
+                    whatsappUrl={buildWhatsAppUrl(product.name, product.price, storeWhatsapp,   `https://shop.rohaty.com/${storeSlug}/produits/${product.slug}`)}
                     primaryColor={primaryColor}
                     storeSlug={storeSlug}
                 />

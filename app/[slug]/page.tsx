@@ -181,7 +181,8 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
             {filteredProducts.map((product) => {
-              const whatsappUrl = buildWhatsAppUrl(product.name, product.price, store.whatsapp)
+              const productUrl = `https://shop.rohaty.com/${store.slug}/produits/${product.slug}`
+              const whatsappUrl = buildWhatsAppUrl(product.name, product.price, store.whatsapp, productUrl)
               return (
                 <ProductCard
                   key={product.id}
