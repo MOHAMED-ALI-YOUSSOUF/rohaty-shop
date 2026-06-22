@@ -45,7 +45,7 @@ export function DashboardShell({ children, storeName, storeSlug, fullName }: Das
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 bottom-0 left-0 w-[240px] z-40 lg:hidden shadow-2xl"
+              className="fixed top-0 bottom-0 left-0 w-[240px] z-40 lg:hidden shadow-2xl h-screen"
             >
               {/* Close Button Inside Drawer */}
               <button

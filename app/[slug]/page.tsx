@@ -13,6 +13,7 @@ interface StorefrontPageProps {
 }
 
 import type { Metadata } from "next";
+import { cn } from '@/lib/utils'
 
 interface MetadataProps {
   params: Promise<{ slug: string }>;
@@ -133,9 +134,47 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
       {/* Sticky Navigation & Header */}
       <StoreHeader
         store={store}
-        categories={allCategories}
-        activeCategory={activeCategory}
       />
+      {/* Barre catégories — sticky indépendante */}
+      {allCategories.length > 0 && (
+        <div className="sticky top-0 z-50 bg-bg-base/80 backdrop-blur-xl border-b border-white/5">
+          <div className="px-3 py-2">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x">
+
+              <Link
+                href={`/${store.slug}`}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start',
+                  !activeCategory ? 'text-white' : 'bg-white/5 text-gray-300'
+                )}
+                style={!activeCategory ? { backgroundColor: primaryColor } : undefined}
+              >
+                Tous
+              </Link>
+
+              {allCategories.map((cat) => {
+                const isActive = activeCategory?.toLowerCase() === cat.toLowerCase()
+                return (
+                  <Link
+                    key={cat}
+                    href={`/${store.slug}?category=${encodeURIComponent(cat)}`}
+                    className={cn(
+                      'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start',
+                      isActive ? 'text-white' : 'bg-white/5 text-gray-300'
+                    )}
+                    style={isActive ? { backgroundColor: primaryColor } : undefined}
+                  >
+                    {cat}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
 
       {/* Catalog Grid Section */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 flex-1 w-full">

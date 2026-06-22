@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
-import { ImageUpload } from '@/components/shared/ImageUpload'
+import { MultiImageUpload, type UploadedImage } from '@/components/shared/MultiImageUpload'
 import { GradientButton } from '@/components/shared/GradientButton'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { slugify } from '@/lib/utils'
@@ -21,7 +21,6 @@ const productSchema = z.object({
   listPrice: z.coerce.number().min(0, 'Le prix barré doit être positif').optional(),
   description: z.string().max(1000, 'La description ne doit pas dépasser 1000 caractères').optional(),
   category: z.string().max(50, 'La catégorie ne doit pas dépasser 50 caractères').optional(),
-  imageUrl: z.string().optional(),
   isPublished: z.boolean().default(true),
 }).refine(
   (data) => {
@@ -38,6 +37,13 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>
 
+interface ProductImage {
+  id: string
+  url: string
+  position: number
+  is_primary: boolean
+}
+
 interface Product {
   id: string
   store_id: string
@@ -50,6 +56,7 @@ interface Product {
   category: string | null
   is_published: boolean
   created_at: string
+  product_images?: ProductImage[]
 }
 
 interface EditProductFormProps {
@@ -63,16 +70,27 @@ export function EditProductForm({ product }: EditProductFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatedSlug, setGeneratedSlug] = useState(product.slug)
-
-  // State pour la suppression
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  // Initialiser les images depuis product_images, ou fallback sur image_url legacy
+  const [productImages, setProductImages] = useState<UploadedImage[]>(() => {
+    if (product.product_images && product.product_images.length > 0) {
+      return [...product.product_images]
+        .sort((a, b) => a.position - b.position)
+        .map((img) => ({ url: img.url, isPrimary: img.is_primary }))
+    }
+    // Fallback : produit migré avec une seule image_url
+    if (product.image_url) {
+      return [{ url: product.image_url, isPrimary: true }]
+    }
+    return []
+  })
+
   const {
     register,
     handleSubmit,
-    setValue,
     watch,
     formState: { errors },
   } = useForm<ProductFormData>({
@@ -83,19 +101,14 @@ export function EditProductForm({ product }: EditProductFormProps) {
       listPrice: product.list_price || undefined,
       description: product.description || '',
       category: product.category || '',
-      imageUrl: product.image_url || '',
       isPublished: product.is_published,
     },
   })
 
   const nameValue = watch('name')
-  const imageUrlValue = watch('imageUrl')
 
-  // Met à jour le slug en direct si le nom change
   useEffect(() => {
-    if (nameValue) {
-      setGeneratedSlug(slugify(nameValue))
-    }
+    if (nameValue) setGeneratedSlug(slugify(nameValue))
   }, [nameValue])
 
   const onSubmit = async (data: ProductFormData) => {
@@ -104,9 +117,8 @@ export function EditProductForm({ product }: EditProductFormProps) {
 
     try {
       const slug = generatedSlug || slugify(data.name)
-
-      // 1. Vérifier les conflits de slug si le nom/slug a changé
       let finalSlug = product.slug
+
       if (slug !== product.slug) {
         const { data: existingProduct } = await supabase
           .from('products')
@@ -114,11 +126,14 @@ export function EditProductForm({ product }: EditProductFormProps) {
           .eq('store_id', product.store_id)
           .eq('slug', slug)
           .maybeSingle()
-
-        finalSlug = existingProduct ? `${slug}-${Math.floor(100 + Math.random() * 900)}` : slug
+        finalSlug = existingProduct
+          ? `${slug}-${Math.floor(100 + Math.random() * 900)}`
+          : slug
       }
 
-      // 2. Mettre à jour le produit
+      const primaryImage = productImages.find((img) => img.isPrimary)
+
+      // 1. Mettre à jour le produit (image_url = cache de la principale)
       const { error: updateError } = await supabase
         .from('products')
         .update({
@@ -128,12 +143,35 @@ export function EditProductForm({ product }: EditProductFormProps) {
           list_price: data.listPrice || data.price,
           description: data.description?.trim() || null,
           category: data.category?.trim() || null,
-          image_url: data.imageUrl || null,
+          image_url: primaryImage?.url || null,
           is_published: data.isPublished,
         })
         .eq('id', product.id)
 
       if (updateError) throw updateError
+
+      // 2. Remplacer toutes les images : supprimer puis réinsérer
+      // (plus simple que de differ les changements + gère le réordonnement)
+      const { error: deleteImagesError } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', product.id)
+
+      if (deleteImagesError) throw deleteImagesError
+
+      if (productImages.length > 0) {
+        const { error: insertImagesError } = await supabase
+          .from('product_images')
+          .insert(
+            productImages.map((img, index) => ({
+              product_id: product.id,
+              url: img.url,
+              position: index,
+              is_primary: img.isPrimary,
+            }))
+          )
+        if (insertImagesError) throw insertImagesError
+      }
 
       router.push('/dashboard/produits')
       router.refresh()
@@ -148,8 +186,8 @@ export function EditProductForm({ product }: EditProductFormProps) {
   const handleDelete = async () => {
     setIsDeleting(true)
     setDeleteError(null)
-
     try {
+      // product_images se supprime en cascade (ON DELETE CASCADE)
       const { error: deleteError } = await supabase
         .from('products')
         .delete()
@@ -161,7 +199,6 @@ export function EditProductForm({ product }: EditProductFormProps) {
       router.push('/dashboard/produits')
       router.refresh()
     } catch (err: any) {
-      console.error(err)
       setDeleteError(err.message || 'Impossible de supprimer le produit.')
     } finally {
       setIsDeleting(false)
@@ -178,28 +215,27 @@ export function EditProductForm({ product }: EditProductFormProps) {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Colonne Image */}
+
+          {/* Colonne Images */}
           <div className="md:col-span-1 space-y-4">
             <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
-              Image du produit
+              Images du produit
             </label>
-            <GlassCard className="p-4 flex flex-col items-center justify-center">
-              <ImageUpload
+            <GlassCard className="p-4">
+              <MultiImageUpload
                 folder="rohaty-shop/products"
-                currentUrl={imageUrlValue}
-                onUpload={(url) => setValue('imageUrl', url)}
-                aspectRatio="square"
+                images={productImages}
+                onChange={setProductImages}
+                maxImages={8}
               />
-              <p className="text-[10px] text-text-muted mt-3 text-center leading-relaxed">
-                Glissez-déposez ou cliquez pour uploader une photo carrée de préférence.
-              </p>
             </GlassCard>
           </div>
 
           {/* Colonne Formulaire */}
           <div className="md:col-span-2 space-y-6">
             <GlassCard className="p-6 space-y-5">
-              {/* Nom du produit */}
+
+              {/* Nom */}
               <div>
                 <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
                   Nom du produit *
@@ -221,9 +257,8 @@ export function EditProductForm({ product }: EditProductFormProps) {
                 )}
               </div>
 
-              {/* Prix Grid */}
+              {/* Prix */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Prix de vente */}
                 <div>
                   <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
                     Prix de vente (DJF) *
@@ -244,7 +279,6 @@ export function EditProductForm({ product }: EditProductFormProps) {
                   )}
                 </div>
 
-                {/* Prix barré */}
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
@@ -303,7 +337,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
                 )}
               </div>
 
-              {/* Statut de publication */}
+              {/* Statut */}
               <div className="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/5">
                 <input
                   type="checkbox"
@@ -322,7 +356,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
               </div>
             </GlassCard>
 
-            {/* Form Actions */}
+            {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
                 href="/dashboard/produits"
@@ -361,7 +395,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
         </div>
       </form>
 
-      {/* Boîte de dialogue de confirmation de suppression */}
+      {/* Dialog suppression — inchangé */}
       <Dialog.Root open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />

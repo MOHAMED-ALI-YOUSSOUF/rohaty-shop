@@ -29,7 +29,7 @@ export default async function NouveauProduitPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-8xl mx-auto">
       <div>
         <Link href="/dashboard/produits" className="inline-flex items-center gap-2 text-text-secondary hover:text-white mb-8">
           <ArrowLeft size={18} /> Retour aux produits

@@ -9,169 +9,113 @@ import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { GradientButton } from '@/components/shared/GradientButton'
 import { ChevronRight, ShoppingBag, Info } from 'lucide-react'
 import { Metadata } from 'next'
+import { ProductImageGallery } from '@/components/storefront/ProductImageGallery'
 
-interface ProductPageProps {
-  params: Promise<{
-    slug: string
-    productSlug: string
-  }>
-}
-
+// --- generateMetadata inchangé sauf la query qui inclut product_images ---
 interface MetadataProps {
-  params: Promise<{
-    slug: string;
-    productSlug: string;
-  }>;
+  params: Promise<{ slug: string; productSlug: string }>
 }
 
-export async function generateMetadata({
-  params,
-}: MetadataProps): Promise<Metadata> {
-  const { slug, productSlug } = await params;
-
-  const supabase = await createClient();
+export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
+  const { slug, productSlug } = await params
+  const supabase = await createClient()
 
   const { data: store } = await supabase
-    .from("stores")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!store) {
-    return {
-      title: "Produit introuvable",
-    };
-  }
+    .from('stores').select('*').eq('slug', slug).maybeSingle()
+  if (!store) return { title: 'Produit introuvable' }
 
   const { data: product } = await supabase
-    .from("products")
-    .select("*")
-    .eq("store_id", store.id)
-    .eq("slug", productSlug)
-    .eq("is_published", true)
-    .maybeSingle();
+    .from('products')
+    .select('*, product_images(*)')   // ← ajout
+    .eq('store_id', store.id)
+    .eq('slug', productSlug)
+    .eq('is_published', true)
+    .maybeSingle()
+  if (!product) return { title: 'Produit introuvable' }
 
-  if (!product) {
-    return {
-      title: "Produit introuvable",
-    };
-  }
-
+  // Image OG : préférer la principale de product_images
+  const primaryImage = product.product_images?.find((i: any) => i.is_primary)
   const image =
+    primaryImage?.url ||
     product.image_url ||
     store.cover_image ||
     store.logo_url ||
-    "https://shop.rohaty.com/logo.png";
+    'https://shop.rohaty.com/logo.png'
 
-  const title = `${product.name} • ${new Intl.NumberFormat(
-    "fr-FR"
-  ).format(product.price)} DJF`;
-
-  const description =
-    product.description ||
-    `Découvrez ${product.name} chez ${store.name}`;
+  const title = `${product.name} • ${new Intl.NumberFormat('fr-FR').format(product.price)} DJF`
+  const description = product.description || `Découvrez ${product.name} chez ${store.name}`
 
   return {
     title,
     description,
-
     openGraph: {
-      title,
-      description,
+      title, description,
       url: `https://shop.rohaty.com/${slug}/produits/${productSlug}`,
-      siteName: "Rohaty Shop",
-      images: [
-        {
-          url: image,
-          width: 1200,
-          height: 1200,
-          alt: product.name,
-        },
-      ],
-      type: "website",
+      siteName: 'Rohaty Shop',
+      images: [{ url: image, width: 1200, height: 1200, alt: product.name }],
+      type: 'website',
     },
-
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [image],
-    },
-  };
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
+  }
 }
 
+interface ProductPageProps {
+  params: Promise<{ slug: string; productSlug: string }>
+}
 
 export default async function PublicProductPage({ params }: ProductPageProps) {
   const { slug, productSlug } = await params
   const supabase = await createClient()
 
-  // 1. Récupérer la boutique
   const { data: store } = await supabase
-    .from('stores')
-    .select('*')
-    .eq('slug', slug)
-    .maybeSingle()
+    .from('stores').select('*').eq('slug', slug).maybeSingle()
+  if (!store) notFound()
 
-  if (!store) {
-    notFound()
-  }
-
-  // 2. Récupérer le produit publié
+  // Charger le produit avec ses images
   const { data: product } = await supabase
     .from('products')
-    .select('*')
+    .select('*, product_images(*)')   // ← ajout
     .eq('store_id', store.id)
     .eq('slug', productSlug)
     .eq('is_published', true)
     .maybeSingle()
+  if (!product) notFound()
 
-  if (!product) {
-    notFound()
-  }
+  // Construire la liste d'images ordonnée
+  const images: string[] = product.product_images && product.product_images.length > 0
+    ? [...product.product_images]
+      .sort((a: any, b: any) => a.position - b.position)
+      .map((img: any) => img.url)
+    : product.image_url
+      ? [product.image_url]   // fallback produits legacy
+      : []
 
-  // 3. Toutes les catégories (pour l'en-tête)
+  // ... (queries storeProducts + relatedProducts inchangées)
   const { data: storeProducts } = await supabase
-    .from('products')
-    .select('category')
-    .eq('store_id', store.id)
-    .eq('is_published', true)
+    .from('products').select('category').eq('store_id', store.id).eq('is_published', true)
 
   const allCategories = Array.from(
-    new Set(
-      (storeProducts || [])
-        .map((p) => p.category?.trim())
-        .filter((c): c is string => !!c)
-    )
+    new Set((storeProducts || []).map((p) => p.category?.trim()).filter((c): c is string => !!c))
   )
 
-  // 4. Produits similaires : même catégorie en priorité, sinon mélange d'autres produits de la boutique
   const { data: sameCategoryProducts } = product.category
     ? await supabase
-      .from('products')
-      .select('*')
-      .eq('store_id', store.id)
-      .eq('is_published', true)
-      .eq('category', product.category)
-      .neq('id', product.id)
-      .limit(10)
+      .from('products').select('*')
+      .eq('store_id', store.id).eq('is_published', true)
+      .eq('category', product.category).neq('id', product.id).limit(10)
     : { data: [] }
 
   let relatedProducts = sameCategoryProducts || []
-
-  // Compléter avec des produits aléatoires de la boutique si pas assez de la même catégorie
   if (relatedProducts.length < 8) {
     const { data: fillerProducts } = await supabase
-      .from('products')
-      .select('*')
-      .eq('store_id', store.id)
-      .eq('is_published', true)
-      .neq('id', product.id)
-      .limit(16)
-
+      .from('products').select('*')
+      .eq('store_id', store.id).eq('is_published', true)
+      .neq('id', product.id).limit(16)
     const existingIds = new Set(relatedProducts.map((p) => p.id))
-    const fillers = (fillerProducts || []).filter((p) => !existingIds.has(p.id))
-
-    relatedProducts = [...relatedProducts, ...fillers].slice(0, 10)
+    relatedProducts = [
+      ...relatedProducts,
+      ...(fillerProducts || []).filter((p) => !existingIds.has(p.id)),
+    ].slice(0, 10)
   }
 
   const primaryColor = store.primary_color || '#2563EB'
@@ -180,19 +124,15 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
     ? Math.round((1 - product.price / product.list_price) * 100)
     : 0
   const whatsappOrderUrl = buildWhatsAppUrl(product.name, product.price, store.whatsapp)
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR').format(price)
-  }
+  const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR').format(price)
 
   return (
     <div
       style={{ '--primary': primaryColor } as React.CSSProperties}
       className="min-h-screen bg-bg-base text-white flex flex-col font-sans"
     >
-
       <main className="flex-1 w-full pb-6">
-        {/* Fil d'ariane compact */}
+        {/* Fil d'ariane */}
         <div className="px-3 sm:px-6 lg:px-8 py-2.5 flex items-center gap-1 text-[10px] sm:text-xs text-text-secondary overflow-x-auto no-scrollbar">
           <Link href={`/${store.slug}`} className="hover:text-white transition-colors shrink-0">
             Boutique
@@ -212,78 +152,43 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
           <span className="text-white/80 truncate">{product.name}</span>
         </div>
 
-
-        {/* MAIN GRID TEMU STYLE */}
-        <div className="max-w-7xl mx-2 lg:mx-8  py-4">
+        {/* MAIN GRID */}
+        <div className="max-w-7xl mx-2 lg:mx-8 py-4">
           <div className="grid lg:grid-cols-2 gap-8">
 
-            {/* IMAGE SECTION */}
-            <div className="w-full">
-              <div className="relative aspect-square bg-white/5 rounded-xl overflow-hidden">
+            {/* IMAGE SECTION — remplacé par la galerie */}
+            <ProductImageGallery
+              images={images}
+              productName={product.name}
+              primaryColor={primaryColor}
+              hasDiscount={hasDiscount}
+              discountPct={discountPct}
+            />
 
-                {product.image_url ? (
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    priority
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <ShoppingBag className="w-12 h-12" />
-                  </div>
-                )}
-
-                {/* Discount */}
-                {hasDiscount && (
-                  <div
-                    className="absolute top-3 left-3 text-white text-xs font-bold px-2 py-1 rounded"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    -{discountPct}%
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* INFO SECTION (FIXED) */}
+            {/* INFO SECTION — inchangé */}
             <div className="space-y-5">
-
-              <div className='flex justify-between '>
-
-
-                {/* TITLE */}
-                <h1 className="text-lg font-semibold leading-snug">
-                  {product.name}
-                </h1>
-
-                {/* CATEGORY */}
+              <div className="flex justify-between">
+                <h1 className="text-lg font-semibold leading-snug">{product.name}</h1>
                 {product.category && (
-                  <span className="text-xs px-2 py-1 rounded bg-white/10"
-                    style={{ backgroundColor: primaryColor + "/20", color: primaryColor }}>
+                  <span
+                    className="text-xs px-2 py-1 rounded bg-white/10"
+                    style={{ backgroundColor: primaryColor + '20', color: primaryColor }}
+                  >
                     {product.category}
                   </span>
                 )}
               </div>
 
-              {/* PRICE */}
               <div className="flex items-center gap-3 flex-wrap">
-                <span
-                  className="text-3xl font-black"
-                  style={{ color: primaryColor }}
-                >
+                <span className="text-3xl font-black" style={{ color: primaryColor }}>
                   {formatPrice(product.price)} DJF
                 </span>
-
                 {hasDiscount && (
                   <span className="text-sm text-gray-400 line-through">
                     {formatPrice(product.list_price)} DJF
                   </span>
                 )}
               </div>
-
-
 
               {product.description && (
                 <div className="pt-3 border-t border-white/5 w-[90vw]">
@@ -293,7 +198,6 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
                 </div>
               )}
 
-              {/* CTA */}
               <div className="pt-4">
                 <GradientButton
                   variant="whatsapp"
@@ -303,22 +207,15 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
                 >
                   💬 Commander via WhatsApp
                 </GradientButton>
-
                 <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-2">
                   <Info className="w-3 h-3" />
                   Commande envoyée automatiquement sur WhatsApp
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
-
-
-        <div className="clear-both" />
-
-        {/* Produits similaires / autres produits — comme Temu en bas de page */}
         {relatedProducts.length > 0 && (
           <div className="px-3 sm:px-6 lg:px-8 pt-8 mt-4 border-t border-white/5">
             <h2 className="text-sm sm:text-base font-bold text-white mb-3">

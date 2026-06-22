@@ -54,9 +54,9 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
   const storeUrl = `/${storeSlug}`
 
   return (
-    <div className={cn('flex flex-col h-screen bg-bg-surface border-r border-white/5 w-[240px]', className)}>
+    <div className={cn('flex flex-col h-full min-h-screen bg-bg-surface border-r border-white/5 w-[240px]', className)}>
       {/* Header (Logo + Store Name) */}
-      <div className="p-6 border-b border-white/5">
+      <div className="p-6 border-b border-white/5 shrink-0">
         <Link href="/dashboard" className="font-heading text-xl font-extrabold tracking-tight block mb-4">
           Rohaty <span className="gradient-text">Shop</span>
         </Link>
@@ -69,7 +69,7 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto min-h-0">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
@@ -78,6 +78,7 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               onClick={onCloseMobile}
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all group relative',
@@ -98,7 +99,7 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
       </nav>
 
       {/* Footer (Store Link + Logout) */}
-      <div className="p-4 border-t border-white/5 space-y-2">
+      <div className="p-4 border-t border-white/5 space-y-2 shrink-0">
         <Link
           href={storeUrl}
           target="_blank"

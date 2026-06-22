@@ -13,6 +13,7 @@ import { GlassCard } from '@/components/shared/GlassCard'
 import { slugify } from '@/lib/utils'
 import { Loader2, ArrowLeft, Info, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
+import { MultiImageUpload, type UploadedImage } from '@/components/shared/MultiImageUpload'
 
 const productSchema = z.object({
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
@@ -20,7 +21,7 @@ const productSchema = z.object({
   listPrice: z.coerce.number().min(0, 'Le prix barré doit être positif').optional(),
   description: z.string().max(1000, 'La description ne doit pas dépasser 1000 caractères').optional(),
   category: z.string().max(50, 'La catégorie ne doit pas dépasser 50 caractères').optional(),
-  imageUrl: z.string().optional(),
+  // imageUrl: z.string().optional(),
   isPublished: z.boolean().default(true),
 }).refine(
   (data) => {
@@ -48,6 +49,7 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatedSlug, setGeneratedSlug] = useState('')
+  const [productImages, setProductImages] = useState<UploadedImage[]>([])
 
   const {
     register,
@@ -59,12 +61,12 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
       isPublished: true,
-      imageUrl: '',
+      // imageUrl: '',
     },
   })
 
   const nameValue = watch('name')
-  const imageUrlValue = watch('imageUrl')
+  // const imageUrlValue = watch('imageUrl')
 
   // Auto-génération du slug en direct à partir du nom
   useEffect(() => {
@@ -93,22 +95,39 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
       // Si le slug existe, on lui ajoute un suffixe aléatoire pour éviter l'erreur de contrainte unique
       const finalSlug = existingProduct ? `${slug}-${Math.floor(100 + Math.random() * 900)}` : slug
 
+      const primaryImage = productImages.find(img => img.isPrimary)
+
       // 2. Insérer le produit en base
-      const { error: insertError } = await supabase
+      const { data: newProduct, error: insertError } = await supabase
         .from('products')
         .insert({
           store_id: storeId,
           name: data.name.trim(),
           slug: finalSlug,
           price: data.price,
-          list_price: data.listPrice || data.price, // Si pas de prix barré, on met le même prix
+          list_price: data.listPrice || data.price,
           description: data.description?.trim() || null,
           category: data.category?.trim() || null,
-          image_url: data.imageUrl || null,
+          image_url: primaryImage?.url || null, // cache de la principale
           is_published: data.isPublished,
         })
+        .select('id')
+        .single()
 
       if (insertError) throw insertError
+
+      // 3. Insérer les images dans product_images
+      if (productImages.length > 0) {
+        const { error: imagesError } = await supabase.from('product_images').insert(
+          productImages.map((img, index) => ({
+            product_id: newProduct.id,
+            url: img.url,
+            position: index,
+            is_primary: img.isPrimary,
+          }))
+        )
+        if (imagesError) throw imagesError
+      }
 
       router.push('/dashboard/produits')
       router.refresh()
@@ -135,11 +154,17 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
             Image du produit
           </label>
           <GlassCard className="p-4 flex flex-col items-center justify-center">
-            <ImageUpload
+            {/* <ImageUpload
               folder="rohaty-shop/products"
               currentUrl={imageUrlValue}
               onUpload={(url) => setValue('imageUrl', url)}
               aspectRatio="square"
+            /> */}
+            <MultiImageUpload
+              folder="rohaty-shop/products"
+              images={productImages}
+              onChange={setProductImages}
+              maxImages={8}
             />
             <p className="text-[10px] text-text-muted mt-3 text-center leading-relaxed">
               Glissez-déposez ou cliquez pour uploader une photo carrée de préférence.

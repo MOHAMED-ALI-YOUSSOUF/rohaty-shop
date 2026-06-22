@@ -213,7 +213,7 @@ export function BoutiqueForm({ store }: BoutiqueFormProps) {
               type="text"
               placeholder="ma-boutique"
               {...register('slug')}
-              className="flex-1 bg-bg-input border border-white/10 rounded-r-lg px-4 py-3 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm font-mono"
+              className="flex-1 w-full bg-bg-input border border-white/10 rounded-r-lg px-4 py-3 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm font-mono"
             />
           </div>
 

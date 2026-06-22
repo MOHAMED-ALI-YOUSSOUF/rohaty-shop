@@ -45,7 +45,7 @@ export default async function ModifierProduitPage({ params }: ModifierProduitPag
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-8xl mx-auto">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold font-heading text-white">
           Modifier le produit
