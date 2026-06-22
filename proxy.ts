@@ -17,20 +17,7 @@ export function proxy(request: NextRequest) {
   }
 
   // ===============================
-  // 2. DASHBOARD PROTECTION
-  // ===============================
-  if (pathname.startsWith('/dashboard')) {
-    const token = request.cookies.get('sb-access-token')?.value
-
-    if (!token) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/connexion'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  // ===============================
-  // 3. STORE SLUG DETECTION (SaaS multi-tenant)
+  // 2. STORE SLUG DETECTION (SaaS multi-tenant)
   // ===============================
   const match = pathname.match(/^\/([a-zA-Z0-9-]+)/)
 
@@ -46,7 +33,7 @@ export function proxy(request: NextRequest) {
   }
 
   // ===============================
-  // 4. DEFAULT
+  // 3. DEFAULT
   // ===============================
   return NextResponse.next()
 }

@@ -44,14 +44,16 @@ export default function LoginPage() {
         password: data.password,
       })
 
+      console.log('AUTH RESULT', data)
+      console.log('AUTH ERROR', authError)
       if (authError) {
         setError("Adresse e-mail ou mot de passe incorrect.")
         setLoading(false)
         return
       }
 
-      router.push('/dashboard')
-      router.refresh()
+      router.replace('/dashboard')
+      setLoading(false)
     } catch (err: any) {
       setError('Une erreur inattendue est survenue.')
       setLoading(false)
