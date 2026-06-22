@@ -44,8 +44,6 @@ export default function LoginPage() {
         password: data.password,
       })
 
-      console.log('AUTH RESULT', data)
-      console.log('AUTH ERROR', authError)
       if (authError) {
         setError("Adresse e-mail ou mot de passe incorrect.")
         setLoading(false)
