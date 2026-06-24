@@ -103,7 +103,7 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
     .select('*')
     .eq('store_id', store.id)
     .eq('is_published', true)
-    .order('created_at', { ascending: false })
+    .order('sort_order', { ascending: true })
 
   // 3. Extraire la liste unique des catégories
   const allCategories = Array.from(

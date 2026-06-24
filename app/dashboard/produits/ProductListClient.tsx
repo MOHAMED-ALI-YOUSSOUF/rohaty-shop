@@ -1,12 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GlassCard } from '@/components/shared/GlassCard'
-import { Edit2, Trash2, Search, AlertTriangle, Loader2, ShoppingBag, Plus } from 'lucide-react'
+import {
+  Edit2,
+  Trash2,
+  Search,
+  AlertTriangle,
+  Loader2,
+  ShoppingBag,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
+} from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 
 interface Product {
@@ -21,6 +32,7 @@ interface Product {
   category: string | null
   is_published: boolean
   created_at: string
+  sort_order?: number
 }
 
 interface ProductListClientProps {
@@ -37,6 +49,9 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [reorderError, setReorderError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const [movingId, setMovingId] = useState<string | null>(null)
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
@@ -51,20 +66,68 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
   const countPublished = products.filter((p) => p.is_published).length
   const countDraft = products.filter((p) => !p.is_published).length
 
+  // ─── Reorder logic ───────────────────────────────────────────────
+  const persistOrder = async (newProducts: Product[]) => {
+    const ids = newProducts.map((p) => p.id)
+    const res = await fetch('/api/products/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      setReorderError(data.error || 'Erreur lors de la sauvegarde de l\'ordre.')
+    } else {
+      setReorderError(null)
+    }
+  }
+
+  const moveProduct = (productId: string, direction: 'up' | 'down') => {
+    // If a search/filter is active, we reorder within the full list based on visible positions
+    const visibleIds = filteredProducts.map((p) => p.id)
+    const currentVisibleIdx = visibleIds.indexOf(productId)
+
+    if (direction === 'up' && currentVisibleIdx === 0) return
+    if (direction === 'down' && currentVisibleIdx === visibleIds.length - 1) return
+
+    const swapWithId =
+      direction === 'up'
+        ? visibleIds[currentVisibleIdx - 1]
+        : visibleIds[currentVisibleIdx + 1]
+
+    setMovingId(productId)
+
+    // Swap in the full products array
+    const newProducts = [...products]
+    const idxA = newProducts.findIndex((p) => p.id === productId)
+    const idxB = newProducts.findIndex((p) => p.id === swapWithId)
+
+    if (idxA === -1 || idxB === -1) return
+
+    ;[newProducts[idxA], newProducts[idxB]] = [newProducts[idxB], newProducts[idxA]]
+
+    setProducts(newProducts)
+
+    startTransition(async () => {
+      await persistOrder(newProducts)
+      setMovingId(null)
+    })
+  }
+
+  // ─── Delete logic ─────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!deleteProduct) return
     setIsDeleting(true)
     setDeleteError(null)
 
     try {
-      // Supprimer d'abord les images (cascade devrait le faire, mais sécurité)
       await supabase.from('product_images').delete().eq('product_id', deleteProduct.id)
 
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', deleteProduct.id)
-        .eq('store_id', deleteProduct.store_id) // ← clé : filtre explicite sur store_id
+        .eq('store_id', deleteProduct.store_id)
 
       if (error) throw error
 
@@ -78,6 +141,8 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
       setIsDeleting(false)
     }
   }
+
+  const isSearchActive = search !== '' || filter !== 'all'
 
   return (
     <div className="space-y-4">
@@ -119,16 +184,37 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
         </div>
       </div>
 
+      {/* Reorder hint */}
+      {!isSearchActive && products.length > 1 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs text-primary/80">
+          <GripVertical className="w-3.5 h-3.5 shrink-0" />
+          <span>Utilisez les flèches <strong>↑ ↓</strong> pour changer l'ordre d'affichage sur votre boutique.</span>
+        </div>
+      )}
+
+      {isSearchActive && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-xs text-text-secondary">
+          <GripVertical className="w-3.5 h-3.5 shrink-0" />
+          <span>Effacez la recherche / le filtre pour réorganiser les produits.</span>
+        </div>
+      )}
+
+      {/* Reorder error */}
+      {reorderError && (
+        <p className="text-xs text-red-400 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+          {reorderError}
+        </p>
+      )}
+
       {/* Table */}
       {filteredProducts.length > 0 ? (
         <div className="rounded-xl border border-white/5 bg-bg-surface overflow-hidden">
-          {/* Scroll container — fixe la hauteur max et scroll verticalement */}
-          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)]">
-            <table className="w-full text-sm text-left min-w-[600px]">
-
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
+            <table className="w-full text-sm text-left min-w-[640px]">
               {/* Header sticky */}
               <thead className="text-xs uppercase bg-bg-surface text-text-secondary sticky top-0 z-10 shadow-[0_1px_0_rgba(255,255,255,0.05)]">
                 <tr>
+                  <th className="px-3 py-3 font-semibold w-16 text-center">Ordre</th>
                   <th className="px-4 py-3 font-semibold">Produit</th>
                   <th className="px-4 py-3 font-semibold">Catégorie</th>
                   <th className="px-4 py-3 font-semibold">Prix</th>
@@ -138,112 +224,161 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
               </thead>
 
               <tbody className="divide-y divide-white/5">
-                {filteredProducts.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-white/[0.03] transition-colors"
-                  >
-                    {/* Produit */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center shrink-0">
-                          {product.image_url ? (
-                            <Image
-                              src={product.image_url}
-                              alt={product.name}
-                              width={40}
-                              height={40}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
-                            <ShoppingBag className="w-4 h-4 text-text-secondary" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-white font-medium truncate max-w-[180px]">
-                            {product.name}
-                          </p>
-                          {product.description && (
-                            <p className="text-[11px] text-text-secondary truncate max-w-[180px]">
-                              {product.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
+                {filteredProducts.map((product, visibleIdx) => {
+                  const isFirst = visibleIdx === 0
+                  const isLast = visibleIdx === filteredProducts.length - 1
+                  const isMoving = movingId === product.id
 
-                    {/* Catégorie */}
-                    <td className="px-4 py-3 text-text-secondary text-xs whitespace-nowrap">
-                      {product.category ? (
-                        <span className="px-2 py-0.5 rounded bg-white/5 text-text-secondary">
-                          {product.category}
-                        </span>
-                      ) : (
-                        <span className="text-white/20">—</span>
-                      )}
-                    </td>
-
-                    {/* Prix */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        {product.list_price > product.price && (
-                          <span className="text-[10px] text-text-muted line-through">
-                            {product.list_price.toLocaleString('fr-FR')} DJF
+                  return (
+                    <tr
+                      key={product.id}
+                      className={`transition-colors ${
+                        isMoving
+                          ? 'bg-primary/5'
+                          : 'hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      {/* Reorder column */}
+                      <td className="px-3 py-3">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            onClick={() => moveProduct(product.id, 'up')}
+                            disabled={isFirst || isPending || isSearchActive}
+                            title="Monter"
+                            className={`p-1 rounded transition-all ${
+                              isFirst || isSearchActive
+                                ? 'text-white/10 cursor-not-allowed'
+                                : 'text-text-secondary hover:text-primary hover:bg-primary/10'
+                            }`}
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <span className="text-[10px] text-white/20 font-mono leading-none">
+                            {visibleIdx + 1}
                           </span>
+                          <button
+                            onClick={() => moveProduct(product.id, 'down')}
+                            disabled={isLast || isPending || isSearchActive}
+                            title="Descendre"
+                            className={`p-1 rounded transition-all ${
+                              isLast || isSearchActive
+                                ? 'text-white/10 cursor-not-allowed'
+                                : 'text-text-secondary hover:text-primary hover:bg-primary/10'
+                            }`}
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Produit */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center shrink-0">
+                            {product.image_url ? (
+                              <Image
+                                src={product.image_url}
+                                alt={product.name}
+                                width={40}
+                                height={40}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <ShoppingBag className="w-4 h-4 text-text-secondary" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-white font-medium truncate max-w-[180px]">
+                              {product.name}
+                            </p>
+                            {product.description && (
+                              <p className="text-[11px] text-text-secondary truncate max-w-[180px]">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Catégorie */}
+                      <td className="px-4 py-3 text-text-secondary text-xs whitespace-nowrap">
+                        {product.category ? (
+                          <span className="px-2 py-0.5 rounded bg-white/5 text-text-secondary">
+                            {product.category}
+                          </span>
+                        ) : (
+                          <span className="text-white/20">—</span>
                         )}
-                        <span className="text-white font-bold text-sm">
-                          {product.price.toLocaleString('fr-FR')} DJF
+                      </td>
+
+                      {/* Prix */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          {product.list_price > product.price && (
+                            <span className="text-[10px] text-text-muted line-through">
+                              {product.list_price.toLocaleString('fr-FR')} DJF
+                            </span>
+                          )}
+                          <span className="text-white font-bold text-sm">
+                            {product.price.toLocaleString('fr-FR')} DJF
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Statut */}
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-[10px] px-2 py-1 rounded-md font-semibold whitespace-nowrap ${
+                            product.is_published
+                              ? 'bg-green-500/10 text-green-400'
+                              : 'bg-white/5 text-text-secondary'
+                          }`}
+                        >
+                          {product.is_published ? '● Publié' : '○ Brouillon'}
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Statut */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`text-[10px] px-2 py-1 rounded-md font-semibold whitespace-nowrap ${
-                          product.is_published
-                            ? 'bg-green-500/10 text-green-400'
-                            : 'bg-white/5 text-text-secondary'
-                        }`}
-                      >
-                        {product.is_published ? '● Publié' : '○ Brouillon'}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/dashboard/produits/${product.id}`}
-                          className="p-2 rounded-lg bg-white/5 hover:bg-primary/10 hover:text-primary text-text-secondary transition-colors"
-                          title="Modifier"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setDeleteError(null)
-                            setDeleteProduct(product)
-                          }}
-                          className="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 hover:text-red-400 text-text-secondary transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <Link
+                            href={`/dashboard/produits/${product.id}`}
+                            className="p-2 rounded-lg bg-white/5 hover:bg-primary/10 hover:text-primary text-text-secondary transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Link>
+                          <button
+                            onClick={() => {
+                              setDeleteError(null)
+                              setDeleteProduct(product)
+                            }}
+                            className="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 hover:text-red-400 text-text-secondary transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Footer count */}
-          <div className="px-4 py-2.5 border-t border-white/5 bg-white/[0.02]">
+          <div className="px-4 py-2.5 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
             <p className="text-[11px] text-text-muted">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
               {search && ` pour "${search}"`}
             </p>
+            {isPending && (
+              <span className="flex items-center gap-1 text-[11px] text-primary/70">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Sauvegarde de l'ordre...
+              </span>
+            )}
           </div>
         </div>
       ) : (
@@ -255,8 +390,8 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
             <h3 className="text-lg font-bold text-white font-heading">Aucun produit trouvé</h3>
             <p className="text-sm text-text-secondary max-w-sm">
               {search
-                ? "Aucun résultat pour votre recherche."
-                : "Ajoutez votre premier produit pour remplir votre vitrine."}
+                ? 'Aucun résultat pour votre recherche.'
+                : 'Ajoutez votre premier produit pour remplir votre vitrine.'}
             </p>
           </div>
           {!search && (

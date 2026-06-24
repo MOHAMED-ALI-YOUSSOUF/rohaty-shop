@@ -47,7 +47,7 @@ export default async function ProduitsPage() {
     .from('products')
     .select('*')
     .eq('store_id', store.id)
-    .order('created_at', { ascending: false })
+    .order('sort_order', { ascending: true })
 
   if (error) {
     console.error('Erreur fetching products:', error)
