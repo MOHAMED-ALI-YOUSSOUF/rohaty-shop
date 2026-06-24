@@ -162,6 +162,7 @@ export default async function DashboardPage() {
             <CopyButton text={absoluteStoreUrl} />
           </div>
         </GlassCard>
+
       </div>
 
       {/* WhatsApp Frame */}

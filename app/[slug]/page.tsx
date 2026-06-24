@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { StoreHeader } from '@/components/storefront/StoreHeader'
 import { ProductCard } from '@/components/storefront/ProductCard'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
+import { StoreAnalytics } from '@/components/storefront/StoreAnalytics'
 
 interface StorefrontPageProps {
   params: Promise<{ slug: string }>
@@ -131,6 +132,9 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
       } as React.CSSProperties}
       className="min-h-screen bg-bg-base text-white flex flex-col font-sans"
     >
+      {/* Google Analytics — tracking par boutique */}
+      <StoreAnalytics slug={store.slug} name={store.name} />
+
       {/* Sticky Navigation & Header */}
       <StoreHeader
         store={store}

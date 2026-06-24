@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Space_Grotesk, Inter } from 'next/font/google'
 import './globals.css'
+import { GoogleAnalytics } from '@/components/shared/GoogleAnalytics'
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -40,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable} data-scroll-behavior="smooth`}>
       <body className="bg-[#0F172A] text-white antialiased">
+        <GoogleAnalytics />
         {children}
       </body>
     </html>
