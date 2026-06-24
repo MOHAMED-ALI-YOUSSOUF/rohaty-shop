@@ -5,6 +5,8 @@ import { useState, useRef, DragEvent, ChangeEvent } from 'react'
 import { UploadCloud, Loader2, Trash2, GripVertical, Star } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { compressImage, folderToProfile } from '@/lib/compressImage'
+
 
 export interface UploadedImage {
     url: string
@@ -41,8 +43,11 @@ export function MultiImageUpload({
             return null
         }
 
+        // ✅ Compression avant upload — c'est tout ce qu'on ajoute
+        const compressed = await compressImage(file, folderToProfile(folder))
+
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', compressed)
         formData.append('folder', folder)
 
         const res = await fetch('/api/upload', { method: 'POST', body: formData })

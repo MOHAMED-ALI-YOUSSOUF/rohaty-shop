@@ -5,6 +5,8 @@ import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react'
 import { UploadCloud, Loader2, Image as ImageIcon, Trash2, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { compressImage, folderToProfile } from '@/lib/compressImage'
+
 
 interface ImageUploadProps {
   folder: 'rohaty-shop/stores/logo' | 'rohaty-shop/stores/banner' | 'rohaty-shop/products'
@@ -74,8 +76,9 @@ export function ImageUpload({
     setPreview(objectUrl)
 
     try {
+      const compressed = await compressImage(file, folderToProfile(folder))
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', compressed)
       formData.append('folder', folder)
 
       const response = await fetch('/api/upload', {
