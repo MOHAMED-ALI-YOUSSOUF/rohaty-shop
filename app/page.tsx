@@ -84,47 +84,10 @@ export default function LandingPage() {
       </div>
 
       {/* Sticky Header */}
-      <header className="sticky top-0 z-50 glass border-b border-white/5 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <span>
-              <Image
-                src="/logo.png"
-                alt="Rohaty Shop Logo"
-                width={40}
-                height={40}
-              />
-            </span>
-            <span className="hidde md:block font-heading font-extrabold text-lg tracking-wider text-white">
-              ROHATY <span className="gradient-text">SHOP</span>
-            </span>
-          </Link>
-
-          {/* Navigation CTAs */}
-          <div className="flex items-center gap-4">
-            <Link
-              href="/connexion"
-              className=" flex items-center gap-2 text-xs sm:text-sm   font-semibold text-text-secondary hover:text-white transition-colors"
-            >
-              <User />
-              <span className='hidden md:block'>
-                Connexion
-              </span>
-            </Link>
-            <GradientButton
-              variant="primary"
-              href="/inscription"
-              className="py-2 px-4 text-xs sm:text-sm font-bold shadow-sm hidden lg:block"
-            >
-              Créer ma boutique →
-            </GradientButton>
-          </div>
-        </div>
-      </header>
+     <SiteHeader />
 
       {/* Hero Section */}
-      <section className="relative pt-10 pb-20  max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-header pb-20  max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="absolute top-1/2 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-secondary/10 blur-3xl pointer-events-none" />
@@ -460,7 +423,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 bg-bg-muted/50 py-12 select-none">
+      <footer className="border-t pb-safe border-white/5 bg-bg-muted/50 py-12 select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <span>

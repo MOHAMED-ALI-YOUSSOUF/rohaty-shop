@@ -37,6 +37,12 @@
 :root {
   --background: #0F172A;
   --foreground: #FFFFFF;
+   /* Hauteur totale du header = pill (py-3 ≈ 24px + logo 36px = ~60px) + gap top (16px) + notch */
+  --header-inner-height: 68px;
+  --header-top-gap: 16px;
+  --header-total-height: calc(
+    env(safe-area-inset-top, 0px) + var(--header-top-gap) + var(--header-inner-height)
+  );
 }
 
 *,
@@ -186,4 +192,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 .page-enter {
   animation: page-fade-in 0.15s ease forwards;
+}
+
+/* Compensation sous le header fixe pour le contenu de la page */
+/* Applique cette classe sur le premier élément sous le header (section hero, etc.) */
+/* Ou utilise directement la variable CSS --header-total-height */
+@layer utilities {
+  .pt-header {
+    padding-top: var(--header-total-height);
+  }
+ 
+  /* Utilitaires safe-area génériques */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
 }

@@ -1,40 +1,53 @@
-
-import { ShoppingBag } from "lucide-react";
-
-import Link from "next/link";
+import { ShoppingBag, User } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
+import { GradientButton } from "@/components/shared/GradientButton"
 
 export function SiteHeader() {
-
     return (
-        <header className="fixed top-0 left-0 right-0 z-50">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
-                <div className="glass-strong rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="size-9 rounded-xl bg-gradient-hero grid place-items-center shadow-glow">
-                            <ShoppingBag className="size-5 text-white" strokeWidth={2.5} />
-                        </div>
-                        <span className="font-display text-lg font-bold tracking-tight">
-                            Rohaty <span className="text-gradient-blue">Shop</span>
-                        </span>
+        <header
+            className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5 backdrop-blur-md"
+            style={{
+                // Pousse tout le header vers le bas de la hauteur de la notch/Dynamic Island
+                // Sur iPhone sans notch : 0px → aucun changement
+                // Sur iPhone avec notch/Dynamic Island : 47-59px selon le modèle
+                paddingTop: 'env(safe-area-inset-top, 0px)',
+            }}
+        >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                {/* Logo */}
+                <Link href="/" className="flex items-center gap-2 group">
+                    <span>
+                        <Image
+                            src="/logo.png"
+                            alt="Rohaty Shop Logo"
+                            width={40}
+                            height={40}
+                        />
+                    </span>
+                    <span className="hidden md:block font-heading font-extrabold text-lg tracking-wider text-white">
+                        ROHATY <span className="gradient-text">SHOP</span>
+                    </span>
+                </Link>
+
+                {/* Navigation CTAs */}
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/connexion"
+                        className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-text-secondary hover:text-white transition-colors"
+                    >
+                        <User className="w-4 h-4" />
+                        <span className="hidden md:block">Connexion</span>
                     </Link>
-                    <div className="hidden md:flex items-center gap-3">
-                        <Link
-                            href="/connexion"
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
-                        >
-                            Connexion
-                        </Link>
-                        <Link
-                            href="/inscription"
-                            className="text-sm font-medium px-4 py-2 rounded-xl bg-gradient-blue text-white shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-transform"
-                        >
-                            Créer ma boutique
-                        </Link>
-                    </div>
-
-
+                    <GradientButton
+                        variant="primary"
+                        href="/inscription"
+                        className="py-2 px-4 text-xs sm:text-sm font-bold shadow-sm hidden lg:block"
+                    >
+                        Créer ma boutique →
+                    </GradientButton>
                 </div>
             </div>
         </header>
-    );
+    )
 }
