@@ -39,9 +39,9 @@ export function Header({ fullName, storeSlug, onMenuClick }: HeaderProps) {
   const storeUrl = `/${storeSlug}`
 
   return (
-    <header className="h-16 border-b border-white/5 bg-bg-surface/50 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-20">
-      {/* Breadcrumb / Left Part */}
-      <div className="flex items-center gap-4">
+    <header className="border-b ... sticky top-0 z-20 flex flex-col"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="h-16 flex items-center justify-between">
         {/* Mobile menu button */}
         <button
           onClick={onMenuClick}
