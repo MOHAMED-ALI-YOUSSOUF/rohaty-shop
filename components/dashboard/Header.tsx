@@ -41,7 +41,7 @@ export function Header({ fullName, storeSlug, onMenuClick }: HeaderProps) {
   return (
     <header className="border-b ... sticky top-0 z-20 flex flex-col"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="h-16 flex items-center justify-between">
+      <div className="h-16 flex items-center">
         {/* Mobile menu button */}
         <button
           onClick={onMenuClick}
