@@ -389,7 +389,7 @@ export default function LandingPage() {
                     <p className="text-xs text-text-secondary mt-1">Pour les commerçants sérieux</p>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black font-heading text-white">9 900</span>
+                    <span className="text-4xl font-black font-heading text-white">5 000</span>
                     <span className="text-sm font-semibold text-text-secondary uppercase">
                       DJF / mois
                     </span>
@@ -428,7 +428,7 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </div>
-      </section>
+      </section> 
 
       {/* Final CTA Section */}
       <section className="py-20 md:py-32 relative text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
