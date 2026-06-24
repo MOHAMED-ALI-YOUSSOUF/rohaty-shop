@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const results = await Promise.all(promises)
     const failedResult = results.find((r) => r.error)
 
-    if (failedResult) {
+    if (failedResult && failedResult.error) {
       console.error('Reorder error:', failedResult.error)
       return NextResponse.json({ error: failedResult.error.message }, { status: 500 })
     }
