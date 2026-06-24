@@ -99,7 +99,7 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
       </nav>
 
       {/* Footer (Store Link + Logout) */}
-      <div className="p-4 pb-safe border-t border-white/5 space-y-2 shrink-0">
+      {/* <div className="p-4 pb-safe border-t border-white/5 space-y-2 shrink-0">
         <Link
           href={storeUrl}
           target="_blank"
@@ -119,7 +119,7 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
           <LogOut className="w-5 h-5 shrink-0" />
           <span>Se déconnecter</span>
         </button>
-      </div>
+      </div> */}
     </div>
   )
 }

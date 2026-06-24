@@ -25,7 +25,7 @@ export function SiteHeader() {
                             height={40}
                         />
                     </span>
-                    <span className="hidden md:block font-heading font-extrabold text-lg tracking-wider text-white">
+                    <span className="font-heading font-extrabold text-lg tracking-wider text-white">
                         ROHATY <span className="gradient-text">SHOP</span>
                     </span>
                 </Link>
@@ -37,7 +37,7 @@ export function SiteHeader() {
                         className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-text-secondary hover:text-white transition-colors"
                     >
                         <User className="w-4 h-4" />
-                        <span className="hidden md:block">Connexion</span>
+                        <span className="hidden lg:block">Connexion</span>
                     </Link>
                     <GradientButton
                         variant="primary"
