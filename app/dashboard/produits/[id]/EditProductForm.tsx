@@ -140,7 +140,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
           name: data.name.trim(),
           slug: finalSlug,
           price: data.price,
-          list_price: data.listPrice || data.price,
+          list_price: data.listPrice ?? null,
           description: data.description?.trim() || null,
           category: data.category?.trim() || null,
           image_url: primaryImage?.url || null,
