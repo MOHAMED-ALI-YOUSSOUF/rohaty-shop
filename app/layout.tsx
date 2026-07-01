@@ -63,6 +63,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <head>
+        <meta name="google-site-verification" content="SQFrhYCg-0ikx_ZpxYJHEGVYTeJSmevgzo9rksUB2DI" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
