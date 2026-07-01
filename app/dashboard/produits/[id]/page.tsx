@@ -34,7 +34,15 @@ export default async function ModifierProduitPage({ params }: ModifierProduitPag
   // 3. Récupérer le produit à modifier
   const { data: product } = await supabase
     .from('products')
-    .select('*')
+    .select(`
+    *,
+    product_images (
+      id,
+      url,
+      position,
+      is_primary
+    )
+  `)
     .eq('id', id)
     .eq('store_id', store.id)
     .single()
