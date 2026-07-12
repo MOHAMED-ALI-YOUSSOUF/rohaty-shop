@@ -23,6 +23,9 @@ interface ProductCardProps {
   whatsappUrl: string
   primaryColor: string
   storeSlug: string
+  textColor: string
+  secondaryTextColor: string
+  cardColor: string
 }
 
 export function ProductCard({
@@ -30,6 +33,9 @@ export function ProductCard({
   whatsappUrl,
   primaryColor = '#2563EB',
   storeSlug,
+  textColor = '#FFFFFF',
+  secondaryTextColor = '#94A3B8',
+  cardColor = '#1E293B',
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const hasDiscount = product.list_price > product.price
@@ -44,7 +50,8 @@ export function ProductCard({
     <motion.div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="rounded-xl bg-bg-surface border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-200"
+      className="rounded-xl border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-200"
+      style={{ backgroundColor: cardColor }}
       animate={{
         borderColor: isHovered ? `${primaryColor}40` : 'rgba(255, 255, 255, 0.05)',
         boxShadow: isHovered ? `0 4px 16px ${primaryColor}20` : `0 4px 12px ${primaryColor}10`,
@@ -83,7 +90,7 @@ export function ProductCard({
       {/* Infos produit — compact, comme le mockup */}
       <div className="p-2 space-y-1.5 flex flex-col flex-1">
         <Link href={productDetailUrl}>
-          <p className="text-[11px] font-semibold text-white truncate leading-tight">
+          <p className="text-[11px] font-semibold truncate leading-tight" style={{ color: textColor }}>
             {product.name}
           </p>
         </Link>
@@ -96,7 +103,7 @@ export function ProductCard({
             {formatPrice(product.price)} DJF
           </span>
           {hasDiscount && (
-            <span className="text-[9px] text-text-muted line-through">
+            <span className="text-[9px] line-through" style={{ color: secondaryTextColor }}>
               {formatPrice(product.list_price)} DJF
             </span>
           )}

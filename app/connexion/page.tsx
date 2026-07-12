@@ -58,6 +58,7 @@ export default function LoginPage() {
     }
   }
 
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden bg-[#0F172A]">
       {/* Background gradients */}
@@ -68,6 +69,7 @@ export default function LoginPage() {
       <div className="mb-8 text-center z-10">
         <Link href="/" className="font-heading text-3xl font-extrabold tracking-tight">
           Rohaty <span className="gradient-text">Shop</span>
+          
         </Link>
         <p className="text-text-secondary text-sm mt-2">
           Accédez à votre tableau de bord de boutique

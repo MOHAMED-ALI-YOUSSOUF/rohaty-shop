@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { cache } from 'react'  // ← ajout
 
+
 // Mettre les queries en cache React pour éviter les re-fetch à chaque navigation
 const getUser = cache(async () => {
   const supabase = await createClient()

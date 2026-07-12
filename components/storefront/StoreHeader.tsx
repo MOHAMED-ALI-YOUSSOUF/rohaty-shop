@@ -12,26 +12,29 @@ interface Store {
   logo_url: string | null
   banner_url?: string | null
   whatsapp: string
-  primary_color: string
 }
 
 interface StoreHeaderProps {
   store: Store
-  
+  primaryColor: string
+  textColor: string
+  secondaryTextColor: string
 }
 
 export function StoreHeader({
   store,
+  primaryColor,
+  textColor,
+  secondaryTextColor,
 }: StoreHeaderProps) {
   const message = encodeURIComponent(
     `Bonjour ${store.name} ! Je visite votre boutique en ligne et je souhaite avoir des renseignements.`
   )
   const cleanNumber = store.whatsapp.replace(/\D/g, '')
   const whatsappContactUrl = `https://wa.me/${cleanNumber}?text=${message}`
-  const primaryColor = store.primary_color || '#2563EB'
 
   return (
-    <header className="bg-bg-base text-white">
+    <header style={{ color: textColor }}>
       {/* Bannière */}
       <div className="relative h-48 bg-gradient-to-r from-bg-muted to-bg-surface border-b border-white/5">
         {store.banner_url ? (
@@ -61,16 +64,16 @@ export function StoreHeader({
               unoptimized
             />
           ) : (
-            <span className="text-xl font-bold font-heading text-primary">
+            <span className="text-xl font-bold font-heading" style={{ color: primaryColor }}>
               {store.name.charAt(0).toUpperCase()}
             </span>
           )}
         </div>
         <div className="mb-1 truncate ">
-          <h1 className="text-sm sm:text-base lg:text-2xl font-bold text-white leading-tight truncate">
+          <h1 className="text-sm sm:text-base lg:text-2xl font-bold leading-tight truncate" style={{ color: textColor }}>
             {store.name}
           </h1>
-          <p className="text-[10px] sm:text-xs text-text-secondary truncate">
+          <p className="text-[10px] sm:text-xs truncate" style={{ color: secondaryTextColor }}>
             {store.slogan || ''}
           </p>
         </div>
@@ -89,8 +92,6 @@ export function StoreHeader({
           💬 Contacter sur WhatsApp
         </a>
       </div>
-
-
     </header>
   )
 }

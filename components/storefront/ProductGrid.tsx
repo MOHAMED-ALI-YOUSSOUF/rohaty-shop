@@ -18,6 +18,9 @@ interface ProductGridProps {
     storeSlug: string
     storeWhatsapp: string
     primaryColor: string
+    textColor: string
+    secondaryTextColor: string
+    cardColor: string
 }
 
 export function ProductGrid({
@@ -25,6 +28,9 @@ export function ProductGrid({
     storeSlug,
     storeWhatsapp,
     primaryColor,
+    textColor,
+    secondaryTextColor,
+    cardColor,
 }: ProductGridProps) {
     if (products.length === 0) {
         return (
@@ -43,6 +49,9 @@ export function ProductGrid({
                     whatsappUrl={buildWhatsAppUrl(product.name, product.price, storeWhatsapp,   `https://shop.rohaty.com/${storeSlug}/produits/${product.slug}`)}
                     primaryColor={primaryColor}
                     storeSlug={storeSlug}
+                    textColor={textColor}
+                    secondaryTextColor={secondaryTextColor}
+                    cardColor={cardColor}
                 />
             ))}
         </div>

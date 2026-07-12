@@ -123,14 +123,22 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
     )
     : (products || [])
 
-  const primaryColor = store.primary_color || '#2563EB'
+  const theme = {
+    primaryColor: store.primary_color || '#2563EB',
+    pageColor: store.page_color || '#0F172A',
+    textColor: store.text_color || '#FFFFFF',
+    secondaryTextColor: store.secondary_text_color || '#94A3B8',
+    cardColor: store.card_color || '#1E293B',
+  }
 
   return (
     <div
       style={{
-        '--primary': primaryColor,
+        '--primary': theme.primaryColor,
+        backgroundColor: theme.pageColor,
+        color: theme.textColor,
       } as React.CSSProperties}
-      className="min-h-screen bg-bg-base text-white flex flex-col font-sans"
+      className="min-h-screen flex flex-col font-sans"
     >
       {/* Google Analytics — tracking par boutique */}
       <StoreAnalytics slug={store.slug} name={store.name} />
@@ -138,10 +146,13 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
       {/* Sticky Navigation & Header */}
       <StoreHeader
         store={store}
+        primaryColor={theme.primaryColor}
+        textColor={theme.textColor}
+        secondaryTextColor={theme.secondaryTextColor}
       />
       {/* Barre catégories — sticky indépendante */}
       {allCategories.length > 0 && (
-        <div className="sticky top-0 z-50 bg-bg-base/80 backdrop-blur-xl border-b border-white/5">
+        <div className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/5" style={{ backgroundColor: `${theme.pageColor}cc` }}>
           <div className="px-3 py-2">
             <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x">
 
@@ -151,7 +162,7 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
                   'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start',
                   !activeCategory ? 'text-white' : 'bg-white/5 text-gray-300'
                 )}
-                style={!activeCategory ? { backgroundColor: primaryColor } : undefined}
+                style={!activeCategory ? { backgroundColor: theme.primaryColor } : { backgroundColor: theme.cardColor, color: theme.secondaryTextColor }}
               >
                 Tous
               </Link>
@@ -166,7 +177,7 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
                       'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start',
                       isActive ? 'text-white' : 'bg-white/5 text-gray-300'
                     )}
-                    style={isActive ? { backgroundColor: primaryColor } : undefined}
+                    style={isActive ? { backgroundColor: theme.primaryColor } : { backgroundColor: theme.cardColor, color: theme.secondaryTextColor }}
                   >
                     {cat}
                   </Link>
@@ -176,9 +187,6 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
           </div>
         </div>
       )}
-
-
-
 
       {/* Catalog Grid Section */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 flex-1 w-full">
@@ -192,21 +200,24 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
                   key={product.id}
                   product={product}
                   whatsappUrl={whatsappUrl}
-                  primaryColor={primaryColor}
+                  primaryColor={theme.primaryColor}
                   storeSlug={store.slug}
+                  textColor={theme.textColor}
+                  secondaryTextColor={theme.secondaryTextColor}
+                  cardColor={theme.cardColor}
                 />
               )
             })}
           </div>
         ) : (
-          <div className="glass rounded-2xl p-12 text-center max-w-md mx-auto border border-white/5 mt-10">
+          <div className="glass rounded-2xl p-12 text-center max-w-md mx-auto border border-white/5 mt-10" style={{ backgroundColor: theme.cardColor, color: theme.textColor }}>
             <div className="text-4xl mb-4 select-none">🚀</div>
-            <h3 className="text-lg font-bold text-white font-heading">
+            <h3 className="text-lg font-bold font-heading">
               {activeCategory
                 ? 'Aucun produit dans cette catégorie'
                 : 'Boutique en cours de préparation'}
             </h3>
-            <p className="text-text-secondary text-xs mt-2 leading-relaxed">
+            <p className="text-xs mt-2 leading-relaxed" style={{ color: theme.secondaryTextColor }}>
               {activeCategory
                 ? "Le commerçant n'a pas encore publié de produits dans cette catégorie."
                 : "Le commerçant n'a pas encore publié de produits pour le moment. Revenez bientôt !"}
@@ -215,7 +226,7 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
               <Link
                 href={`/${store.slug}`}
                 className="mt-5 inline-flex text-xs font-semibold px-4 py-2 rounded-lg text-white hover:opacity-90 transition cursor-pointer"
-                style={{ backgroundColor: primaryColor }}
+                style={{ backgroundColor: theme.primaryColor }}
               >
                 Voir tous les produits
               </Link>
@@ -225,10 +236,10 @@ export default async function StorefrontPage({ params, searchParams }: Storefron
       </main>
 
       {/* Storefront Footer */}
-      <footer className="border-t border-white/5 bg-bg-muted/30 py-6 text-center text-xs text-text-secondary select-none">
+      <footer className="border-t border-white/5 py-6 text-center text-xs select-none" style={{ backgroundColor: theme.pageColor, color: theme.secondaryTextColor }}>
         <p>
           © {new Date().getFullYear()} {store.name} · Propulsé par{' '}
-          <Link href="/" className="text-primary font-semibold hover:underline">
+          <Link href="/" className="font-semibold hover:underline" style={{ color: theme.primaryColor }}>
             Rohaty Shop
           </Link>
         </p>

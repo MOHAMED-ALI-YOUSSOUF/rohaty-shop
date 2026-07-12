@@ -1,7 +1,7 @@
 // app/dashboard/apparence/ApparenceForm.tsx
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ImageUpload } from '@/components/shared/ImageUpload'
@@ -9,6 +9,9 @@ import { GradientButton } from '@/components/shared/GradientButton'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { Loader2, Save, CheckCircle, XCircle, Paintbrush, Image as ImageIcon, Laptop } from 'lucide-react'
 import Image from 'next/image'
+import { STORE_THEMES, StoreTheme } from '@/lib/store-themes'
+import { getContrastText } from '@/lib/color-utils'
+import { cn } from '@/lib/utils'
 
 interface StoreData {
   id: string
@@ -18,20 +21,74 @@ interface StoreData {
   logo_url: string | null
   banner_url: string | null
   primary_color: string
+  page_color: string | null
+  theme_name: string | null
+  text_color: string | null
+  secondary_text_color: string | null
+  card_color: string | null
 }
 
 interface ApparenceFormProps {
   store: StoreData
 }
 
-const PRESET_COLORS = [
-  { name: 'Bleu Rohaty', hex: '#2563EB' },
-  { name: 'Cyan Accent', hex: '#06B6D4' },
-  { name: 'Violet Élite', hex: '#8B5CF6' },
-  { name: 'Vert Émeraude', hex: '#10B981' },
-  { name: 'Rose Rubis', hex: '#F43F5E' },
-  { name: 'Orange Amber', hex: '#F59E0B' },
-]
+interface ThemeColors {
+  primary: string
+  page: string
+  text: string
+  secondaryText: string
+  card: string
+}
+
+const DEFAULT_COLORS: ThemeColors = {
+  primary: '#2563EB',
+  page: '#0F172A',
+  text: '#FFFFFF',
+  secondaryText: '#94A3B8',
+  card: '#1E293B',
+}
+
+/** Compare les clés de thème sans se soucier de la casse / des espaces. */
+function normalizeKey(value: string | null | undefined) {
+  return (value ?? '').trim().toLowerCase()
+}
+
+/** Un champ "pastille couleur + code hex" réutilisable (remplace les 5 blocs dupliqués). */
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-[11px] font-semibold uppercase text-text-secondary">
+        {label}
+      </label>
+      <div className="flex items-center gap-2 bg-bg-input px-3 py-2.5 rounded-lg border border-white/10 w-full sm:w-auto">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-8 h-8 rounded border border-white/10 bg-transparent cursor-pointer"
+        />
+        <input
+          type="text"
+          value={value.toUpperCase()}
+          onChange={(e) => {
+            const val = e.target.value
+            if (val.startsWith('#') && val.length <= 7) onChange(val)
+          }}
+          maxLength={7}
+          className="bg-transparent text-white font-mono text-xs w-20 outline-none"
+        />
+      </div>
+    </div>
+  )
+}
 
 export function ApparenceForm({ store }: ApparenceFormProps) {
   const router = useRouter()
@@ -41,10 +98,49 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // States pour l'aperçu en temps réel
   const [logoUrl, setLogoUrl] = useState<string | null>(store.logo_url)
   const [bannerUrl, setBannerUrl] = useState<string | null>(store.banner_url)
-  const [primaryColor, setPrimaryColor] = useState<string>(store.primary_color || '#2563EB')
+  const [themeName, setThemeName] = useState<string>(store.theme_name || 'midnight')
+
+  const [colors, setColors] = useState<ThemeColors>({
+    primary: store.primary_color || DEFAULT_COLORS.primary,
+    page: store.page_color || DEFAULT_COLORS.page,
+    text: store.text_color || DEFAULT_COLORS.text,
+    secondaryText: store.secondary_text_color || DEFAULT_COLORS.secondaryText,
+    card: store.card_color || DEFAULT_COLORS.card,
+  })
+
+  // Clé de thème "actif" recalculée à chaque render à partir de l'état courant.
+  // Aucun useEffect qui resynchronise depuis `store` -> plus de reset intempestif
+  // de la sélection quand le parent (Server Component) re-render.
+  const activeThemeKey = useMemo(() => normalizeKey(themeName), [themeName])
+
+  const updateColor = (key: keyof ThemeColors, value: string) => {
+    setColors((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleSelectTheme = (key: string, theme: StoreTheme) => {
+    setThemeName(key)
+    setColors({
+      primary: theme.primaryColor,
+      page: theme.pageColor,
+      text: theme.textColor,
+      secondaryText: theme.secondaryTextColor,
+      card: theme.cardColor,
+    })
+  }
+
+  const handlePageColorChange = (value: string) => {
+    const newTextColor = getContrastText(value)
+    const isLight = newTextColor === '#111827'
+    setColors((prev) => ({
+      ...prev,
+      page: value,
+      text: newTextColor,
+      secondaryText: isLight ? '#6B7280' : '#94A3B8',
+      card: isLight ? '#F9FAFB' : '#1E293B',
+    }))
+  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,7 +154,12 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
         .update({
           logo_url: logoUrl || null,
           banner_url: bannerUrl || null,
-          primary_color: primaryColor,
+          primary_color: colors.primary,
+          page_color: colors.page,
+          theme_name: themeName,
+          text_color: colors.text,
+          secondary_text_color: colors.secondaryText,
+          card_color: colors.card,
         })
         .eq('id', store.id)
 
@@ -148,63 +249,88 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
               <h2 className="text-lg font-bold text-white">Charte Graphique</h2>
             </div>
 
-            {/* Couleur principale */}
+            {/* Section Thèmes */}
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
-                  Couleur principale (Thème)
+                  Choisir un thème
                 </label>
                 <p className="text-xs text-text-secondary mb-4">
-                  Cette couleur sera appliquée sur les boutons, les bordures de survol, et les éléments clés de votre vitrine.
+                  Sélectionnez un style de départ pré-configuré pour votre boutique.
                 </p>
               </div>
 
-              {/* Pré-sélections de couleur */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color.hex}
-                    type="button"
-                    onClick={() => setPrimaryColor(color.hex)}
-                    className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer"
-                  >
-                    <span
-                      className="w-6 h-6 rounded-full border border-white/20"
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    <span className="text-[10px] text-text-secondary truncate w-full text-center">
-                      {color.name}
-                    </span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {Object.entries(STORE_THEMES).map(([key, theme]) => {
+                  const isActive = normalizeKey(key) === activeThemeKey
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleSelectTheme(key, theme)}
+                      className={cn(
+                        "flex flex-col gap-3 p-4 rounded-xl border transition-all text-left w-full cursor-pointer",
+                        isActive
+                          ? "bg-white/10 border-primary shadow-lg shadow-primary/10"
+                          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                      )}
+                    >
+                      <div className="flex justify-between items-center w-full">
+                        <span className="text-sm font-bold text-white">{theme.name}</span>
+                        {isActive && (
+                          <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px]">
+                            Actif
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Couleur prévisualisation */}
+                      <div className="flex gap-2 p-2 rounded-lg items-center w-full" style={{ backgroundColor: theme.pageColor }}>
+                        <span className="w-5 h-5 rounded-full border border-white/10 shrink-0" style={{ backgroundColor: theme.primaryColor }} title="Principale" />
+                        <span className="w-5 h-5 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: theme.cardColor }} title="Cartes" />
+                        <span className="text-[10px] font-medium leading-none shrink-0" style={{ color: theme.textColor }}>Abc</span>
+                        <span className="text-[10px] font-medium leading-none shrink-0" style={{ color: theme.secondaryTextColor }}>Abc</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Personnalisation avancée */}
+            <div className="space-y-6 pt-6 border-t border-white/5">
+              <div>
+                <h3 className="text-xs font-semibold tracking-widest uppercase text-white">Personnalisation avancée</h3>
+                <p className="text-[11px] text-text-secondary mt-1">
+                  Ajustez les couleurs individuellement pour affiner l'identité visuelle de votre vitrine.
+                </p>
               </div>
 
-              {/* Sélecteur personnalisé */}
-              <div className="flex items-center gap-4 pt-2">
-                <div className="flex items-center gap-2 bg-bg-input px-3 py-2.5 rounded-lg border border-white/10 w-full sm:w-auto">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="w-8 h-8 rounded border border-white/10 bg-transparent cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={primaryColor.toUpperCase()}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val.startsWith('#') && val.length <= 7) {
-                        setPrimaryColor(val)
-                      }
-                    }}
-                    maxLength={7}
-                    className="bg-transparent text-white font-mono text-xs w-20 outline-none"
-                  />
-                </div>
-                <span className="text-xs text-text-muted font-mono">
-                  Couleur active
-                </span>
-              </div>
+              <ColorField
+                label="Couleur principale (Thème)"
+                value={colors.primary}
+                onChange={(v) => updateColor('primary', v)}
+              />
+              <ColorField
+                label="Couleur de fond"
+                value={colors.page}
+                onChange={handlePageColorChange}
+              />
+              <ColorField
+                label="Texte principal"
+                value={colors.text}
+                onChange={(v) => updateColor('text', v)}
+              />
+              <ColorField
+                label="Texte secondaire"
+                value={colors.secondaryText}
+                onChange={(v) => updateColor('secondaryText', v)}
+              />
+              <ColorField
+                label="Fond cartes produits"
+                value={colors.card}
+                onChange={(v) => updateColor('card', v)}
+              />
             </div>
           </GlassCard>
         </div>
@@ -235,7 +361,7 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
             </div>
 
             {/* Storefront Preview Body */}
-            <div className="bg-bg-base h-[480px] overflow-y-auto custom-scrollbar select-none text-white relative">
+            <div className="h-[480px] overflow-y-auto custom-scrollbar select-none relative" style={{ backgroundColor: colors.page, color: colors.text }}>
               {/* Banner Area */}
               <div className="relative h-28 bg-gradient-to-r from-bg-muted to-bg-surface border-b border-white/5">
                 {bannerUrl ? (
@@ -248,7 +374,7 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
                   />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center opacity-70">
-                    <span className="text-[10px] text-text-muted font-heading tracking-widest">
+                    <span className="text-[10px] font-heading tracking-widest" style={{ color: colors.secondaryText }}>
                       Bannière non configurée
                     </span>
                   </div>
@@ -256,8 +382,8 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
               </div>
 
               {/* Logo and Info */}
-              <div className="px-4 -mt-8 relative z-10 flex items-end gap-3">
-                <div className="w-16 h-16 rounded-xl border border-white/10 bg-bg-surface overflow-hidden relative shadow-lg flex items-center justify-center shrink-0">
+              <div className="px-4 -mt-1 relative z-10 flex items-end gap-3">
+                <div className="w-16 h-16 rounded-xl border border-white/10 overflow-hidden relative shadow-lg flex items-center justify-center shrink-0" style={{ backgroundColor: colors.card }}>
                   {logoUrl ? (
                     <Image
                       src={logoUrl}
@@ -267,16 +393,16 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
                       unoptimized
                     />
                   ) : (
-                    <span className="text-xl font-bold font-heading text-primary">
+                    <span className="text-xl font-bold font-heading" style={{ color: colors.primary }}>
                       {store.name.charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
-                <div className="mb-1 truncate">
-                  <h4 className="text-sm font-bold text-white leading-tight truncate">
+                <div className="mb-1  truncate">
+                  <h4 className="text-sm font-bold leading-tight truncate" style={{ color: colors.text }}>
                     {store.name}
                   </h4>
-                  <p className="text-[10px] text-text-secondary truncate">
+                  <p className="text-[10px] truncate" style={{ color: colors.secondaryText }}>
                     {store.slogan || 'Slogan de votre boutique'}
                   </p>
                 </div>
@@ -296,14 +422,14 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
                 <div className="flex gap-2 border-b border-white/5 pb-2 overflow-x-auto text-[10px] no-scrollbar">
                   <span
                     className="px-2.5 py-1 rounded-full text-white font-medium shrink-0 cursor-pointer"
-                    style={{ backgroundColor: primaryColor }}
+                    style={{ backgroundColor: colors.primary }}
                   >
                     Tous
                   </span>
-                  <span className="px-2.5 py-1 rounded-full text-text-secondary bg-white/5 border border-white/5 shrink-0">
+                  <span className="px-2.5 py-1 rounded-full border shrink-0" style={{ backgroundColor: colors.card, color: colors.secondaryText, borderColor: 'rgba(255,255,255,0.05)' }}>
                     Accessoires
                   </span>
-                  <span className="px-2.5 py-1 rounded-full text-text-secondary bg-white/5 border border-white/5 shrink-0">
+                  <span className="px-2.5 py-1 rounded-full border shrink-0" style={{ backgroundColor: colors.card, color: colors.secondaryText, borderColor: 'rgba(255,255,255,0.05)' }}>
                     Mode Homme
                   </span>
                 </div>
@@ -312,27 +438,25 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
                 <div className="grid grid-cols-2 gap-3 pb-6">
                   {/* Mock Card 1 */}
                   <div
-                    className="rounded-xl bg-bg-surface border border-white/5 overflow-hidden transition-all duration-200"
+                    className="rounded-xl border overflow-hidden transition-all duration-200"
                     style={{
-                      boxShadow: `0 4px 12px ${primaryColor}10`,
-                      borderColor: `${primaryColor}20`,
+                      backgroundColor: colors.card,
+                      boxShadow: `0 4px 12px ${colors.primary}10`,
+                      borderColor: `${colors.primary}20`,
                     }}
                   >
-                    <div className="aspect-square bg-white/5 relative flex items-center justify-center">
-                      <span className="text-[9px] text-text-muted">Image Produit</span>
+                    <div className="aspect-square relative flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <span className="text-[9px]" style={{ color: colors.secondaryText }}>Image Produit</span>
                     </div>
                     <div className="p-2 space-y-1.5">
-                      <p className="text-[11px] font-semibold text-white truncate leading-tight">
+                      <p className="text-[11px] font-semibold truncate leading-tight" style={{ color: colors.text }}>
                         Exemple Produit A
                       </p>
                       <div className="flex justify-between items-baseline gap-1">
-                        <span
-                          className="text-xs font-bold font-heading"
-                          style={{ color: primaryColor }}
-                        >
+                        <span className="text-xs font-bold font-heading" style={{ color: colors.primary }}>
                           8 500 DJF
                         </span>
-                        <span className="text-[9px] text-text-muted line-through">
+                        <span className="text-[9px] line-through" style={{ color: colors.secondaryText }}>
                           10 000 DJF
                         </span>
                       </div>
@@ -347,19 +471,16 @@ export function ApparenceForm({ store }: ApparenceFormProps) {
                   </div>
 
                   {/* Mock Card 2 */}
-                  <div className="rounded-xl bg-bg-surface border border-white/5 overflow-hidden">
-                    <div className="aspect-square bg-white/5 relative flex items-center justify-center">
-                      <span className="text-[9px] text-text-muted">Image Produit</span>
+                  <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: colors.card, borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <div className="aspect-square relative flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <span className="text-[9px]" style={{ color: colors.secondaryText }}>Image Produit</span>
                     </div>
                     <div className="p-2 space-y-1.5">
-                      <p className="text-[11px] font-semibold text-white truncate leading-tight">
+                      <p className="text-[11px] font-semibold truncate leading-tight" style={{ color: colors.text }}>
                         Exemple Produit B
                       </p>
                       <div>
-                        <span
-                          className="text-xs font-bold font-heading"
-                          style={{ color: primaryColor }}
-                        >
+                        <span className="text-xs font-bold font-heading" style={{ color: colors.primary }}>
                           15 000 DJF
                         </span>
                       </div>

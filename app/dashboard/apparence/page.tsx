@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ApparenceForm } from './ApparenceForm'
+export const dynamic = 'force-dynamic'
 
 export default async function ApparencePage() {
   const supabase = await createClient()
@@ -18,7 +19,20 @@ export default async function ApparencePage() {
   // 2. Récupérer la boutique associée
   const { data: store } = await supabase
     .from('stores')
-    .select('id, name, slug, slogan, logo_url, banner_url, primary_color')
+    .select(`
+  id,
+  name,
+  slug,
+  slogan,
+  logo_url,
+  banner_url,
+  primary_color,
+  page_color,
+  theme_name,
+  text_color,
+  secondary_text_color,
+  card_color
+`)
     .eq('owner_id', user.id)
     .single()
 

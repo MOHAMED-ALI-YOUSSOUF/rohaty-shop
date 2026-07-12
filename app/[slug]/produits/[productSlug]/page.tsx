@@ -118,7 +118,14 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
     ].slice(0, 10)
   }
 
-  const primaryColor = store.primary_color || '#2563EB'
+  const theme = {
+    primaryColor: store.primary_color || '#2563EB',
+    pageColor: store.page_color || '#0F172A',
+    textColor: store.text_color || '#FFFFFF',
+    secondaryTextColor: store.secondary_text_color || '#94A3B8',
+    cardColor: store.card_color || '#1E293B',
+  }
+
   const hasDiscount = product.list_price > product.price
   const discountPct = hasDiscount
     ? Math.round((1 - product.price / product.list_price) * 100)
@@ -128,13 +135,17 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
 
   return (
     <div
-      style={{ '--primary': primaryColor } as React.CSSProperties}
-      className="min-h-screen bg-bg-base text-white flex flex-col font-sans"
+      style={{
+        '--primary': theme.primaryColor,
+        backgroundColor: theme.pageColor,
+        color: theme.textColor,
+      } as React.CSSProperties}
+      className="min-h-screen flex flex-col font-sans"
     >
       <main className="flex-1 w-full pb-6">
         {/* Fil d'ariane */}
-        <div className="px-3 sm:px-6 lg:px-8 py-2.5 flex items-center gap-1 text-[10px] sm:text-xs text-text-secondary overflow-x-auto no-scrollbar">
-          <Link href={`/${store.slug}`} className="hover:text-white transition-colors shrink-0">
+        <div className="px-3 sm:px-6 lg:px-8 py-2.5 flex items-center gap-1 text-[10px] sm:text-xs overflow-x-auto no-scrollbar" style={{ color: theme.secondaryTextColor }}>
+          <Link href={`/${store.slug}`} className="hover:opacity-80 transition-colors shrink-0" style={{ color: theme.textColor }}>
             Boutique
           </Link>
           {product.category && (
@@ -142,14 +153,15 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
               <ChevronRight className="w-3 h-3 shrink-0 text-text-muted" />
               <Link
                 href={`/${store.slug}?category=${encodeURIComponent(product.category)}`}
-                className="hover:text-white transition-colors shrink-0"
+                className="hover:opacity-80 transition-colors shrink-0"
+                style={{ color: theme.textColor }}
               >
                 {product.category}
               </Link>
             </>
           )}
           <ChevronRight className="w-3 h-3 shrink-0 text-text-muted" />
-          <span className="text-white/80 truncate">{product.name}</span>
+          <span className="truncate" style={{ color: theme.textColor }}>{product.name}</span>
         </div>
 
         {/* MAIN GRID */}
@@ -160,7 +172,7 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
             <ProductImageGallery
               images={images}
               productName={product.name}
-              primaryColor={primaryColor}
+              primaryColor={theme.primaryColor}
               hasDiscount={hasDiscount}
               discountPct={discountPct}
             />
@@ -168,11 +180,11 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
             {/* INFO SECTION — inchangé */}
             <div className="space-y-5">
               <div className="flex justify-between">
-                <h1 className="text-lg font-semibold leading-snug">{product.name}</h1>
+                <h1 className="text-lg font-semibold leading-snug" style={{ color: theme.textColor }}>{product.name}</h1>
                 {product.category && (
                   <span
-                    className="text-xs px-2 py-1 rounded bg-white/10"
-                    style={{ backgroundColor: primaryColor + '20', color: primaryColor }}
+                    className="text-xs px-2 py-1 rounded"
+                    style={{ backgroundColor: theme.primaryColor + '20', color: theme.primaryColor }}
                   >
                     {product.category}
                   </span>
@@ -180,11 +192,11 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-3xl font-black" style={{ color: primaryColor }}>
+                <span className="text-3xl font-black" style={{ color: theme.primaryColor }}>
                   {formatPrice(product.price)} DJF
                 </span>
                 {hasDiscount && (
-                  <span className="text-sm text-gray-400 line-through">
+                  <span className="text-sm line-through" style={{ color: theme.secondaryTextColor }}>
                     {formatPrice(product.list_price)} DJF
                   </span>
                 )}
@@ -192,7 +204,7 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
 
               {product.description && (
                 <div className="pt-3 border-t border-white/5 w-[90vw]">
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ color: theme.textColor }}>
                     {product.description}
                   </p>
                 </div>
@@ -207,7 +219,7 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
                 >
                   💬 Commander via WhatsApp
                 </GradientButton>
-                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-2">
+                <div className="flex items-center gap-2 text-[10px] mt-2" style={{ color: theme.secondaryTextColor }}>
                   <Info className="w-3 h-3" />
                   Commande envoyée automatiquement sur WhatsApp
                 </div>
@@ -218,23 +230,26 @@ export default async function PublicProductPage({ params }: ProductPageProps) {
 
         {relatedProducts.length > 0 && (
           <div className="px-3 sm:px-6 lg:px-8 pt-8 mt-4 border-t border-white/5">
-            <h2 className="text-sm sm:text-base font-bold text-white mb-3">
+            <h2 className="text-sm sm:text-base font-bold mb-3" style={{ color: theme.textColor }}>
               {product.category ? `Aussi dans ${product.category}` : 'Vous aimerez aussi'}
             </h2>
             <ProductGrid
               products={relatedProducts}
               storeSlug={store.slug}
               storeWhatsapp={store.whatsapp}
-              primaryColor={primaryColor}
+              primaryColor={theme.primaryColor}
+              textColor={theme.textColor}
+              secondaryTextColor={theme.secondaryTextColor}
+              cardColor={theme.cardColor}
             />
           </div>
         )}
       </main>
 
-      <footer className="border-t border-white/5 bg-bg-muted/30 py-5 text-center text-[10px] sm:text-xs text-text-secondary select-none">
+      <footer className="border-t border-white/5 py-5 text-center text-[10px] sm:text-xs select-none" style={{ backgroundColor: theme.pageColor, color: theme.secondaryTextColor }}>
         <p>
           © {new Date().getFullYear()} {store.name} · Propulsé par{' '}
-          <Link href="/" className="text-primary font-semibold hover:underline">
+          <Link href="/" className="font-semibold hover:underline" style={{ color: theme.primaryColor }}>
             Rohaty Shop
           </Link>
         </p>

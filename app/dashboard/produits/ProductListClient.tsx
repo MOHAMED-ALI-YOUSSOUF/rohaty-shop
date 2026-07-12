@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -16,6 +16,8 @@ import {
   Plus,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   GripVertical,
 } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -39,6 +41,8 @@ interface ProductListClientProps {
   initialProducts: Product[]
 }
 
+const PAGE_SIZE = 10
+
 export function ProductListClient({ initialProducts }: ProductListClientProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -46,6 +50,8 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -53,20 +59,58 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
   const [isPending, startTransition] = useTransition()
   const [movingId, setMovingId] = useState<string | null>(null)
 
+  // Liste des catégories distinctes présentes dans les produits
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    products.forEach((p) => {
+      if (p.category) set.add(p.category)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [products])
+
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
-    if (filter === 'published') return matchesSearch && p.is_published
-    if (filter === 'draft') return matchesSearch && !p.is_published
-    return matchesSearch
+    const matchesStatus =
+      filter === 'published' ? p.is_published : filter === 'draft' ? !p.is_published : true
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
+    return matchesSearch && matchesStatus && matchesCategory
   })
 
   const countAll = products.length
   const countPublished = products.filter((p) => p.is_published).length
   const countDraft = products.filter((p) => !p.is_published).length
 
+  const isSearchActive = search !== '' || filter !== 'all' || categoryFilter !== 'all'
+
+  // ─── Pagination ──────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+
+  // Revenir à la page 1 dès que la recherche ou les filtres changent
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, filter, categoryFilter])
+
+  // Garde-fou si la page courante devient hors limites (ex: suppression d'un produit)
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [totalPages, currentPage])
+
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  )
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages))
+  }
+
   // ─── Reorder logic ───────────────────────────────────────────────
+  // Le réordonnancement manuel n'a de sens que sur la liste complète, non filtrée
+  // et non paginée : on le désactive dès qu'un filtre ou une pagination est actif.
+  const canReorder = !isSearchActive && totalPages === 1
+
   const persistOrder = async (newProducts: Product[]) => {
     const ids = newProducts.map((p) => p.id)
     const res = await fetch('/api/products/reorder', {
@@ -83,8 +127,7 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
   }
 
   const moveProduct = (productId: string, direction: 'up' | 'down') => {
-    // If a search/filter is active, we reorder within the full list based on visible positions
-    const visibleIds = filteredProducts.map((p) => p.id)
+    const visibleIds = paginatedProducts.map((p) => p.id)
     const currentVisibleIdx = visibleIds.indexOf(productId)
 
     if (direction === 'up' && currentVisibleIdx === 0) return
@@ -97,7 +140,6 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
 
     setMovingId(productId)
 
-    // Swap in the full products array
     const newProducts = [...products]
     const idxA = newProducts.findIndex((p) => p.id === productId)
     const idxB = newProducts.findIndex((p) => p.id === swapWithId)
@@ -142,8 +184,6 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
     }
   }
 
-  const isSearchActive = search !== '' || filter !== 'all'
-
   return (
     <div className="space-y-4">
       {/* Search + Filters */}
@@ -159,43 +199,60 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
           />
         </div>
 
-        <div className="flex bg-bg-input/60 border border-white/5 p-1 rounded-lg self-start shrink-0">
-          {([
-            { key: 'all', label: 'Tous', count: countAll },
-            { key: 'published', label: 'Publiés', count: countPublished },
-            { key: 'draft', label: 'Brouillons', count: countDraft },
-          ] as const).map(({ key, label, count }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                filter === key
-                  ? key === 'published'
-                    ? 'bg-green-500/80 text-white'
-                    : key === 'draft'
-                    ? 'bg-white/10 text-white'
-                    : 'bg-primary text-white'
-                  : 'text-text-secondary hover:text-white'
-              }`}
-            >
-              {label} ({count})
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+          {/* Filtre catégorie */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-lg bg-bg-input border border-white/10 text-white text-xs font-medium outline-none focus:border-primary/50 cursor-pointer"
+          >
+            <option value="all">Toutes catégories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+
+          {/* Filtre statut */}
+          <div className="flex bg-bg-input/60 border border-white/5 p-1 rounded-lg self-start shrink-0">
+            {([
+              { key: 'all', label: 'Tous', count: countAll },
+              { key: 'published', label: 'Publiés', count: countPublished },
+              { key: 'draft', label: 'Brouillons', count: countDraft },
+            ] as const).map(({ key, label, count }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  filter === key
+                    ? key === 'published'
+                      ? 'bg-green-500/80 text-white'
+                      : key === 'draft'
+                      ? 'bg-white/10 text-white'
+                      : 'bg-primary text-white'
+                    : 'text-text-secondary hover:text-white'
+                }`}
+              >
+                {label} ({count})
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Reorder hint */}
-      {!isSearchActive && products.length > 1 && (
+      {canReorder && products.length > 1 && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs text-primary/80">
           <GripVertical className="w-3.5 h-3.5 shrink-0" />
           <span>Utilisez les flèches <strong>↑ ↓</strong> pour changer l'ordre d'affichage sur votre boutique.</span>
         </div>
       )}
 
-      {isSearchActive && (
+      {!canReorder && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-xs text-text-secondary">
           <GripVertical className="w-3.5 h-3.5 shrink-0" />
-          <span>Effacez la recherche / le filtre pour réorganiser les produits.</span>
+          <span>Effacez la recherche / les filtres pour réorganiser les produits.</span>
         </div>
       )}
 
@@ -207,7 +264,7 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
       )}
 
       {/* Table */}
-      {filteredProducts.length > 0 ? (
+      {paginatedProducts.length > 0 ? (
         <div className="rounded-xl border border-white/5 bg-bg-surface overflow-hidden">
           <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
             <table className="w-full text-sm text-left min-w-[640px]">
@@ -224,18 +281,17 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
               </thead>
 
               <tbody className="divide-y divide-white/5">
-                {filteredProducts.map((product, visibleIdx) => {
-                  const isFirst = visibleIdx === 0
-                  const isLast = visibleIdx === filteredProducts.length - 1
+                {paginatedProducts.map((product, idxOnPage) => {
+                  const isFirst = idxOnPage === 0
+                  const isLast = idxOnPage === paginatedProducts.length - 1
                   const isMoving = movingId === product.id
+                  const globalIdx = (currentPage - 1) * PAGE_SIZE + idxOnPage
 
                   return (
                     <tr
                       key={product.id}
                       className={`transition-colors ${
-                        isMoving
-                          ? 'bg-primary/5'
-                          : 'hover:bg-white/[0.03]'
+                        isMoving ? 'bg-primary/5' : 'hover:bg-white/[0.03]'
                       }`}
                     >
                       {/* Reorder column */}
@@ -243,10 +299,10 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => moveProduct(product.id, 'up')}
-                            disabled={isFirst || isPending || isSearchActive}
+                            disabled={isFirst || isPending || !canReorder}
                             title="Monter"
                             className={`p-1 rounded transition-all ${
-                              isFirst || isSearchActive
+                              isFirst || !canReorder
                                 ? 'text-white/10 cursor-not-allowed'
                                 : 'text-text-secondary hover:text-primary hover:bg-primary/10'
                             }`}
@@ -254,14 +310,14 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
                             <ChevronUp className="w-4 h-4" />
                           </button>
                           <span className="text-[10px] text-white/20 font-mono leading-none">
-                            {visibleIdx + 1}
+                            {globalIdx + 1}
                           </span>
                           <button
                             onClick={() => moveProduct(product.id, 'down')}
-                            disabled={isLast || isPending || isSearchActive}
+                            disabled={isLast || isPending || !canReorder}
                             title="Descendre"
                             className={`p-1 rounded transition-all ${
-                              isLast || isSearchActive
+                              isLast || !canReorder
                                 ? 'text-white/10 cursor-not-allowed'
                                 : 'text-text-secondary hover:text-primary hover:bg-primary/10'
                             }`}
@@ -367,18 +423,48 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
             </table>
           </div>
 
-          {/* Footer count */}
-          <div className="px-4 py-2.5 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+          {/* Footer count + pagination */}
+          <div className="px-4 py-2.5 border-t border-white/5 bg-white/[0.02] flex flex-col sm:flex-row items-center justify-between gap-2">
             <p className="text-[11px] text-text-muted">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
               {search && ` pour "${search}"`}
+              {categoryFilter !== 'all' && ` · ${categoryFilter}`}
             </p>
-            {isPending && (
-              <span className="flex items-center gap-1 text-[11px] text-primary/70">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Sauvegarde de l'ordre...
-              </span>
-            )}
+
+            <div className="flex items-center gap-3">
+              {isPending && (
+                <span className="flex items-center gap-1 text-[11px] text-primary/70">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Sauvegarde de l'ordre...
+                </span>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-md text-text-secondary hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    title="Page précédente"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <span className="text-[11px] text-text-secondary px-2 font-mono">
+                    Page {currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-md text-text-secondary hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    title="Page suivante"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : (
@@ -389,12 +475,12 @@ export function ProductListClient({ initialProducts }: ProductListClientProps) {
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-white font-heading">Aucun produit trouvé</h3>
             <p className="text-sm text-text-secondary max-w-sm">
-              {search
-                ? 'Aucun résultat pour votre recherche.'
+              {search || categoryFilter !== 'all'
+                ? 'Aucun résultat pour votre recherche / filtre.'
                 : 'Ajoutez votre premier produit pour remplir votre vitrine.'}
             </p>
           </div>
-          {!search && (
+          {!search && categoryFilter === 'all' && (
             <Link
               href="/dashboard/produits/nouveau"
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-primary hover:bg-primary/95 text-white transition-all mt-2"
