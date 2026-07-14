@@ -1,31 +1,22 @@
 // app/dashboard/produits/page.tsx
+// AVANT : refaisait auth.getUser() + stores.select
+// APRÈS : utilise getCurrentUser() et getCurrentStore() depuis le cache React du layout
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { ProductListClient } from './ProductListClient'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function ProduitsPage() {
-  const supabase = await createClient()
+  // ✅ Cache React — pas de double appel auth
+  const user = await getCurrentUser()
+  if (!user) redirect('/connexion')
 
-  // 1. Récupérer l'utilisateur
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/connexion')
-  }
-
-  // 2. Récupérer la boutique
-  const { data: store } = await supabase
-    .from('stores')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single()
+  const store = await getCurrentStore(user.id)
 
   if (!store) {
-    // Si pas de boutique, on ne peut pas charger de produits
     return (
       <div className="flex flex-col items-center justify-center text-center py-12 space-y-4">
         <h2 className="text-xl font-bold text-white font-heading">Aucune boutique trouvée</h2>
@@ -42,7 +33,8 @@ export default async function ProduitsPage() {
     )
   }
 
-  // 3. Récupérer tous les produits de la boutique (tous, y compris brouillons)
+  // Récupérer tous les produits de la boutique (tous, y compris brouillons)
+  const supabase = await createClient()
   const { data: products, error } = await supabase
     .from('products')
     .select('*')
@@ -74,8 +66,7 @@ export default async function ProduitsPage() {
         </Link>
       </div>
 
-
-      {/* Liste des produits (Composant Client) */}
+      {/* Liste des produits */}
       <ProductListClient initialProducts={products || []} />
     </div>
   )

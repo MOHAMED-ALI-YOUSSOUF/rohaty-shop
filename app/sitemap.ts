@@ -1,66 +1,56 @@
+// app/sitemap.ts
+// Sitemap dynamique avec ISR 1h — utilise le client public (sans cookies)
 import { MetadataRoute } from 'next'
-import { createClient } from '@supabase/supabase-js'
+import { createPublicClient } from '@/lib/supabase/public'
 
 export const revalidate = 3600 // Cache sitemap pendant 1 heure
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shop.rohaty.com'
 
-  // Initialisation directe du client Supabase pour éviter les problèmes liés aux cookies/headers pendant le build statique
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
   // Routes statiques de base
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: new Date(),
+      lastModified: new Date('2026-01-01'), // date fixe — pas de faux "changement"
       changeFrequency: 'daily',
       priority: 1.0,
     },
     {
       url: `${baseUrl}/connexion`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-01-01'),
       changeFrequency: 'monthly',
       priority: 0.5,
     },
     {
       url: `${baseUrl}/inscription`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-01-01'),
       changeFrequency: 'monthly',
       priority: 0.5,
     },
   ]
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Supabase env variables are missing for sitemap generation.')
-    return staticRoutes
-  }
-
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    // ✅ Client public — pas de cookies(), compatible ISR
+    const supabase = createPublicClient()
 
-    // Récupérer toutes les boutiques
-    const { data: stores } = await supabase
-      .from('stores')
-      .select('slug, created_at')
+    // Requête parallèle : boutiques + produits en même temps
+    const [{ data: stores }, { data: products }] = await Promise.all([
+      supabase.from('stores').select('slug, created_at'),
+      supabase
+        .from('products')
+        .select('slug, created_at, stores!inner(slug)')
+        .eq('is_published', true),
+    ])
 
-    // Récupérer tous les produits publiés avec le slug de leur boutique associée
-    const { data: products } = await supabase
-      .from('products')
-      .select('slug, created_at, stores(slug)')
-      .eq('is_published', true)
-
-    // Formater les routes des boutiques
-    const storeRoutes: MetadataRoute.Sitemap = (stores || []).map((store) => ({
+    const storeRoutes: MetadataRoute.Sitemap = (stores as any[] || []).map((store) => ({
       url: `${baseUrl}/${store.slug}`,
       lastModified: store.created_at ? new Date(store.created_at) : new Date(),
       changeFrequency: 'daily',
       priority: 0.8,
     }))
 
-    // Formater les routes des produits
-    const productRoutes: MetadataRoute.Sitemap = (products || [])
+    const productRoutes: MetadataRoute.Sitemap = (products as any[] || [])
       .filter((product) => product.stores && (product.stores as any).slug)
       .map((product) => ({
         url: `${baseUrl}/${(product.stores as any).slug}/produits/${product.slug}`,

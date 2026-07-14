@@ -1,245 +1,170 @@
 // app/[slug]/page.tsx
+// Page vitrine publique — ISR 60 secondes + client public sans cookies()
+//
+// AVANT : Dynamic SSR — Serverless Function à chaque visite, cookies() bloque le cache
+// APRÈS  : ISR 60s → HTML servi depuis le CDN après la première génération
+
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { cache } from 'react'
+import { createPublicClient } from '@/lib/supabase/public'
 import { StoreHeader } from '@/components/storefront/StoreHeader'
-import { ProductCard } from '@/components/storefront/ProductCard'
+import { StorefrontCatalog } from '@/components/storefront/StorefrontCatalog'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { StoreAnalytics } from '@/components/storefront/StoreAnalytics'
+import { getTheme } from '@/lib/store-themes'
+import type { Metadata } from 'next'
+
+// ─── ISR : revalider toutes les 60 secondes ───────────────────────────────
+export const revalidate = 60
+
+// ─── Pré-générer les pages au build ─────────────────────────────────────────
+export async function generateStaticParams() {
+  const supabase = createPublicClient()
+  const { data: stores } = await supabase.from('stores').select('slug')
+  return (stores as any[] || []).map((store) => ({ slug: store.slug }))
+}
 
 interface StorefrontPageProps {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ category?: string }>
+  // searchParams retiré — filtrage catégorie géré côté client dans StorefrontCatalog
 }
 
-import type { Metadata } from "next";
-import { cn } from '@/lib/utils'
+// ─── Cache React : déduplique les queries entre generateMetadata et la page ─
+const getStoreData = cache(async (slug: string) => {
+  const supabase = createPublicClient()
 
-interface MetadataProps {
-  params: Promise<{ slug: string }>;
-}
-
-export async function generateMetadata({
-  params,
-}: MetadataProps): Promise<Metadata> {
-  const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: store } = await supabase
-    .from("stores")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!store) {
-    return {
-      title: "Boutique introuvable",
-    };
-  }
-
-  const image =
-    store.cover_image ||
-    store.logo_url ||
-    "https://shop.rohaty.com/logo.png";
-
-  return {
-    title: `${store.name} | Rohaty Shop`,
-    description:
-      store.description ||
-      `Découvrez les produits de ${store.name}`,
-
-    openGraph: {
-      title: store.name,
-      description:
-        store.description ||
-        `Découvrez les produits de ${store.name}`,
-      url: `https://shop.rohaty.com/${store.slug}`,
-      siteName: "Rohaty Shop",
-      images: [
-        {
-          url: image,
-          width: 1200,
-          height: 630,
-          alt: store.name,
-        },
-      ],
-      locale: "fr_FR",
-      type: "website",
-    },
-
-    twitter: {
-      card: "summary_large_image",
-      title: store.name,
-      description:
-        store.description ||
-        `Découvrez les produits de ${store.name}`,
-      images: [image],
-    },
-  };
-}
-
-
-
-export default async function StorefrontPage({ params, searchParams }: StorefrontPageProps) {
-  const { slug } = await params
-  const { category } = await searchParams
-  const supabase = await createClient()
-
-  // 1. Récupérer la boutique par son slug
   const { data: store } = await supabase
     .from('stores')
     .select('*')
     .eq('slug', slug)
     .maybeSingle()
 
-  if (!store) {
-    notFound()
-  }
+  if (!store) return null
 
-  // 2. Récupérer tous les produits publiés de la boutique
+  const typedStore = store as any
+
   const { data: products } = await supabase
     .from('products')
-    .select('*')
-    .eq('store_id', store.id)
+    .select('id, name, slug, description, price, list_price, image_url, category')
+    .eq('store_id', typedStore.id)
     .eq('is_published', true)
     .order('sort_order', { ascending: true })
 
-  // 3. Extraire la liste unique des catégories
-  const allCategories = Array.from(
-    new Set(
-      (products || [])
-        .map((p) => p.category?.trim())
-        .filter((c): c is string => !!c)
-    )
-  )
+  return { store: typedStore, products: products as any[] || [] }
+})
 
-  const activeCategory = category || ''
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const data = await getStoreData(slug)
 
-  // 4. Filtrer les produits par catégorie si spécifiée
-  const filteredProducts = activeCategory
-    ? (products || []).filter(
-      (p) => p.category?.toLowerCase() === activeCategory.toLowerCase()
-    )
-    : (products || [])
+  if (!data) return { title: 'Boutique introuvable' }
+  const { store } = data
 
-  const theme = {
-    primaryColor: store.primary_color || '#2563EB',
-    pageColor: store.page_color || '#0F172A',
-    textColor: store.text_color || '#FFFFFF',
-    secondaryTextColor: store.secondary_text_color || '#94A3B8',
-    cardColor: store.card_color || '#1E293B',
+  const image =
+    store.cover_image ||
+    store.logo_url ||
+    'https://shop.rohaty.com/logo.png'
+
+  return {
+    title: `${store.name} | Rohaty Shop`,
+    description:
+      store.description || `Découvrez les produits de ${store.name}`,
+    alternates: {
+      canonical: `https://shop.rohaty.com/${store.slug}`,
+    },
+    openGraph: {
+      title: store.name,
+      description:
+        store.description || `Découvrez les produits de ${store.name}`,
+      url: `https://shop.rohaty.com/${store.slug}`,
+      siteName: 'Rohaty Shop',
+      images: [{ url: image, width: 1200, height: 630, alt: store.name }],
+      locale: 'fr_FR',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: store.name,
+      description:
+        store.description || `Découvrez les produits de ${store.name}`,
+      images: [image],
+    },
   }
+}
+
+export default async function StorefrontPage({ params }: StorefrontPageProps) {
+  const { slug } = await params
+  const data = await getStoreData(slug)
+
+  if (!data) notFound()
+
+  const { store, products } = data
+
+  // Résoudre le thème de la boutique
+  const theme = getTheme(store.theme_name)
+  const primaryColor = store.primary_color || theme.primaryColor
+  const pageColor = store.page_color || theme.pageColor
+  const textColor = store.text_color || theme.textColor
+  const secondaryTextColor = store.secondary_text_color || theme.secondaryTextColor
+  const cardColor = store.card_color || theme.cardColor
+
+  // Calcul des URLs WhatsApp côté serveur (Server Component)
+  const productsWithWhatsApp = products.map((product) => ({
+    ...product,
+    whatsappUrl: buildWhatsAppUrl(
+      product.name,
+      product.price,
+      store.whatsapp,
+      `https://shop.rohaty.com/${store.slug}/produits/${product.slug}`
+    ),
+  }))
 
   return (
     <div
       style={{
-        '--primary': theme.primaryColor,
-        backgroundColor: theme.pageColor,
-        color: theme.textColor,
+        '--primary': primaryColor,
+        '--page-color': pageColor,
+        '--text-color': textColor,
+        '--secondary-text': secondaryTextColor,
+        '--card-color': cardColor,
+        backgroundColor: pageColor,
+        color: textColor,
       } as React.CSSProperties}
       className="min-h-screen flex flex-col font-sans"
     >
       {/* Google Analytics — tracking par boutique */}
       <StoreAnalytics slug={store.slug} name={store.name} />
 
-      {/* Sticky Navigation & Header */}
+      {/* Header de la boutique */}
       <StoreHeader
         store={store}
-        primaryColor={theme.primaryColor}
-        textColor={theme.textColor}
-        secondaryTextColor={theme.secondaryTextColor}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        secondaryTextColor={secondaryTextColor}
       />
-      {/* Barre catégories — sticky indépendante */}
-      {allCategories.length > 0 && (
-        <div className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/5" style={{ backgroundColor: `${theme.pageColor}cc` }}>
-          <div className="px-3 py-2">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x">
 
-              <Link
-                href={`/${store.slug}`}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start',
-                  !activeCategory ? 'text-white' : 'bg-white/5 text-gray-300'
-                )}
-                style={!activeCategory ? { backgroundColor: theme.primaryColor } : { backgroundColor: theme.cardColor, color: theme.secondaryTextColor }}
-              >
-                Tous
-              </Link>
+      {/* Catalogue avec filtrage client-side */}
+      <StorefrontCatalog
+        products={productsWithWhatsApp}
+        storeSlug={store.slug}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        cardColor={cardColor}
+      />
 
-              {allCategories.map((cat) => {
-                const isActive = activeCategory?.toLowerCase() === cat.toLowerCase()
-                return (
-                  <Link
-                    key={cat}
-                    href={`/${store.slug}?category=${encodeURIComponent(cat)}`}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start',
-                      isActive ? 'text-white' : 'bg-white/5 text-gray-300'
-                    )}
-                    style={isActive ? { backgroundColor: theme.primaryColor } : { backgroundColor: theme.cardColor, color: theme.secondaryTextColor }}
-                  >
-                    {cat}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Catalog Grid Section */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 flex-1 w-full">
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-            {filteredProducts.map((product) => {
-              const productUrl = `https://shop.rohaty.com/${store.slug}/produits/${product.slug}`
-              const whatsappUrl = buildWhatsAppUrl(product.name, product.price, store.whatsapp, productUrl)
-              return (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  whatsappUrl={whatsappUrl}
-                  primaryColor={theme.primaryColor}
-                  storeSlug={store.slug}
-                  textColor={theme.textColor}
-                  secondaryTextColor={theme.secondaryTextColor}
-                  cardColor={theme.cardColor}
-                />
-              )
-            })}
-          </div>
-        ) : (
-          <div className="glass rounded-2xl p-12 text-center max-w-md mx-auto border border-white/5 mt-10" style={{ backgroundColor: theme.cardColor, color: theme.textColor }}>
-            <div className="text-4xl mb-4 select-none">🚀</div>
-            <h3 className="text-lg font-bold font-heading">
-              {activeCategory
-                ? 'Aucun produit dans cette catégorie'
-                : 'Boutique en cours de préparation'}
-            </h3>
-            <p className="text-xs mt-2 leading-relaxed" style={{ color: theme.secondaryTextColor }}>
-              {activeCategory
-                ? "Le commerçant n'a pas encore publié de produits dans cette catégorie."
-                : "Le commerçant n'a pas encore publié de produits pour le moment. Revenez bientôt !"}
-            </p>
-            {activeCategory && (
-              <Link
-                href={`/${store.slug}`}
-                className="mt-5 inline-flex text-xs font-semibold px-4 py-2 rounded-lg text-white hover:opacity-90 transition cursor-pointer"
-                style={{ backgroundColor: theme.primaryColor }}
-              >
-                Voir tous les produits
-              </Link>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* Storefront Footer */}
-      <footer className="border-t border-white/5 py-6 text-center text-xs select-none" style={{ backgroundColor: theme.pageColor, color: theme.secondaryTextColor }}>
+      {/* Footer */}
+      <footer
+        className="border-t border-white/5 py-6 text-center text-xs select-none"
+        style={{ backgroundColor: cardColor, color: secondaryTextColor }}
+      >
         <p>
           © {new Date().getFullYear()} {store.name} · Propulsé par{' '}
-          <Link href="/" className="font-semibold hover:underline" style={{ color: theme.primaryColor }}>
+          <Link href="/" className="font-semibold hover:underline" style={{ color: primaryColor }}>
             Rohaty Shop
           </Link>
         </p>

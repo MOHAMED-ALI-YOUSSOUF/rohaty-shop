@@ -1,30 +1,18 @@
 // app/dashboard/boutique/page.tsx
+// AVANT : refaisait auth.getUser() + stores.select
+// APRÈS : cache React partagé depuis le layout
+
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { BoutiqueForm } from './BoutiqueForm'
 
 export default async function BoutiquePage() {
-  const supabase = await createClient()
+  // ✅ Cache React — pas de double appel auth
+  const user = await getCurrentUser()
+  if (!user) redirect('/connexion')
 
-  // 1. Récupérer l'utilisateur connecté
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/connexion')
-  }
-
-  // 2. Récupérer la boutique de l'utilisateur
-  const { data: store } = await supabase
-    .from('stores')
-    .select('id, name, slug, slogan, whatsapp')
-    .eq('owner_id', user.id)
-    .single()
-
-  if (!store) {
-    redirect('/dashboard')
-  }
+  const store = await getCurrentStore(user.id)
+  if (!store) redirect('/dashboard')
 
   return (
     <div className="space-y-6">
@@ -33,7 +21,7 @@ export default async function BoutiquePage() {
           Paramètres de la boutique
         </h1>
         <p className="text-text-secondary text-xs mt-1">
-          Gérez les informations d'identification, de contact et l'adresse de votre boutique.
+          Gérez les informations d&apos;identification, de contact et l&apos;adresse de votre boutique.
         </p>
       </div>
 

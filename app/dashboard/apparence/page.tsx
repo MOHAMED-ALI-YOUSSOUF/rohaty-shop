@@ -1,44 +1,18 @@
 // app/dashboard/apparence/page.tsx
+// AVANT : refaisait auth.getUser() + stores.select
+// APRÈS : cache React partagé depuis le layout
+
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { ApparenceForm } from './ApparenceForm'
-export const dynamic = 'force-dynamic'
 
 export default async function ApparencePage() {
-  const supabase = await createClient()
+  // ✅ Cache React — pas de double appel auth
+  const user = await getCurrentUser()
+  if (!user) redirect('/connexion')
 
-  // 1. Récupérer l'utilisateur connecté
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/connexion')
-  }
-
-  // 2. Récupérer la boutique associée
-  const { data: store } = await supabase
-    .from('stores')
-    .select(`
-  id,
-  name,
-  slug,
-  slogan,
-  logo_url,
-  banner_url,
-  primary_color,
-  page_color,
-  theme_name,
-  text_color,
-  secondary_text_color,
-  card_color
-`)
-    .eq('owner_id', user.id)
-    .single()
-
-  if (!store) {
-    redirect('/dashboard')
-  }
+  const store = await getCurrentStore(user.id)
+  if (!store) redirect('/dashboard')
 
   return (
     <div className="space-y-6">

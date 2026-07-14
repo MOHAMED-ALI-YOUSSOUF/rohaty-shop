@@ -1,85 +1,74 @@
 // app/dashboard/page.tsx
+// Page principale du dashboard — utilise le cache React partagé depuis le layout
+//
+// AVANT : refaisait auth.getUser() + users.select + stores.select('*') + 2 counts séparés
+// APRÈS : getCurrentUser() et getCurrentStore() réutilisent le cache du layout (0 appel réseau)
+//          + les counts produits fusionnés en 1 seule query
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { CopyButton } from '@/components/dashboard/CopyButton'
-import { ShoppingBag, Eye, Link as LinkIcon, Phone, ArrowRight, CheckCircle2 } from 'lucide-react'
+import {
+  ShoppingBag,
+  Eye,
+  Link as LinkIcon,
+  Phone,
+  ArrowRight,
+  CheckCircle2,
+} from 'lucide-react'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
+  // ✅ Utilise le cache React — pas de double appel réseau
+  const user = await getCurrentUser()
+  if (!user) redirect('/connexion')
 
-  // 1. Récupérer l'utilisateur
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const store = await getCurrentStore(user.id)
 
-  if (!user) {
-    redirect('/connexion')
-  }
-
-  // 2. Récupérer le profil utilisateur
-  const { data: userProfile } = await supabase
-    .from('users')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
-
-  const firstName = (userProfile?.full_name || user.user_metadata?.full_name || 'Commerçant')
+  const firstName = (
+    user.user_metadata?.full_name || 'Commerçant'
+  )
     .trim()
     .split(/\s+/)[0]
 
-  // 3. Récupérer la boutique
-  const { data: store } = await supabase
-    .from('stores')
-    .select('*')
-    .eq('owner_id', user.id)
-    .single()
-
-  // Si l'utilisateur n'a pas de boutique, on peut lui afficher un avertissement ou des valeurs par défaut
-  const storeName = store?.name || 'Ma Boutique'
-  const storeSlug = store?.slug || ''
   const storeId = store?.id || null
+  const storeSlug = store?.slug || ''
   const whatsappNumber = store?.whatsapp || 'Non configuré'
 
-  // 4. Compter les produits de la boutique
+  // ✅ 1 seule query pour total + published (au lieu de 2 queries count séparées)
   let totalProducts = 0
   let publishedProducts = 0
 
   if (storeId) {
-    const { count: total } = await supabase
+    const supabase = await createClient()
+    const { data: productFlags } = await supabase
       .from('products')
-      .select('*', { count: 'exact', head: true })
+      .select('is_published')
       .eq('store_id', storeId)
 
-    const { count: published } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-      .eq('store_id', storeId)
-      .eq('is_published', true)
-
-    totalProducts = total || 0
-    publishedProducts = published || 0
+    totalProducts = productFlags?.length || 0
+    publishedProducts = productFlags?.filter((p) => p.is_published).length || 0
   }
 
-  // Urls de la boutique
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const absoluteStoreUrl = `${appUrl}/${storeSlug}`
   const displayStoreUrl = `shop.rohaty.com/${storeSlug}`
 
   return (
     <div className="space-y-8">
-      {/* Welcome Message */}
+      {/* Message de bienvenue */}
       <div>
         <h1 className="text-3xl md:text-4xl font-bold font-heading text-white">
           Bonjour, {firstName} 👋
         </h1>
         <p className="text-text-secondary text-sm mt-2">
-          Bienvenue dans votre espace de gestion. Voici un aperçu de votre activité aujourd'hui.
+          Bienvenue dans votre espace de gestion. Voici un aperçu de votre activité aujourd&apos;hui.
         </p>
       </div>
 
-      {/* Stats / Actions Grid */}
+      {/* Grille de stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Produits */}
         <GlassCard className="p-6 flex flex-col justify-between h-48">
@@ -162,12 +151,10 @@ export default async function DashboardPage() {
             <CopyButton text={absoluteStoreUrl} />
           </div>
         </GlassCard>
-
       </div>
 
       {/* WhatsApp Frame */}
       <GlassCard className="p-6 border border-success/20 bg-success/5 relative overflow-hidden">
-        {/* Decorative WhatsApp bubble background elements */}
         <div className="absolute right-[-20px] bottom-[-20px] w-32 h-32 rounded-full bg-success/5 blur-2xl pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -180,7 +167,7 @@ export default async function DashboardPage() {
                 Numéro de réception WhatsApp
               </h3>
               <p className="text-sm text-text-secondary mt-1">
-                Toutes les commandes de vos clients sont envoyées sous forme de messages pré-remplis sur :
+                Toutes les commandes de vos clients sont envoyées sur :
               </p>
               <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-sm font-bold">
                 <span className="w-2 h-2 rounded-full bg-success animate-ping" />

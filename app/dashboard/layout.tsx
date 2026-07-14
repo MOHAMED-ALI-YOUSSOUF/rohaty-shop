@@ -1,33 +1,44 @@
 // app/dashboard/layout.tsx
+// Layout du dashboard — utilise le cache React partagé
+//
+// AVANT : layout faisait auth.getUser() + 2 queries, puis chaque page enfant refaisait tout
+// APRÈS : layout initialise le cache, les pages enfants réutilisent le même résultat
+
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
-import { cache } from 'react'  // ← ajout
+import {
+  getCurrentUser,
+  getCurrentStore,
+  getCurrentUserProfile,
+} from '@/lib/supabase/dashboard-cache'
 
-
-// Mettre les queries en cache React pour éviter les re-fetch à chaque navigation
-const getUser = cache(async () => {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return { supabase, user }
-})
-
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { supabase, user } = await getUser()
-
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  // getCurrentUser() est mis en cache par React — si une page enfant l'appelle aussi,
+  // c'est le même résultat réutilisé (0 appel réseau supplémentaire)
+  const user = await getCurrentUser()
   if (!user) redirect('/connexion')
 
-  const [{ data: userProfile }, { data: store }] = await Promise.all([
-    supabase.from('users').select('full_name').eq('id', user.id).single(),
-    supabase.from('stores').select('name, slug').eq('owner_id', user.id).single(),
+  // Charger store et profil en parallèle
+  const [store, userProfile] = await Promise.all([
+    getCurrentStore(user.id),
+    getCurrentUserProfile(user.id),
   ])
 
-  const fullName = userProfile?.full_name || user.user_metadata?.full_name || 'Commerçant'
+  const fullName =
+    userProfile?.full_name || user.user_metadata?.full_name || 'Commerçant'
   const storeName = store?.name || 'Ma Boutique'
   const storeSlug = store?.slug || ''
 
   return (
-    <DashboardShell storeName={storeName} storeSlug={storeSlug} fullName={fullName}>
+    <DashboardShell
+      storeName={storeName}
+      storeSlug={storeSlug}
+      fullName={fullName}
+    >
       {children}
     </DashboardShell>
   )
