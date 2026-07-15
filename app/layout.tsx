@@ -61,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable} data-scroll-behavior="smooth`}>
       <head>
         <meta name="google-site-verification" content="SQFrhYCg-0ikx_ZpxYJHEGVYTeJSmevgzo9rksUB2DI" />
         <meta name="mobile-web-app-capable" content="yes" />

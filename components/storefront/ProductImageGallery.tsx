@@ -56,7 +56,7 @@ export function ProductImageGallery({
 
     // Plusieurs images
     return (
-        <div className="w-full space-y-3">
+        <div className="w-full min-w-0 space-y-3">
             {/* Image principale */}
             <div className="relative aspect-square bg-white/5 rounded-xl overflow-hidden group">
                 <Image
@@ -100,7 +100,7 @@ export function ProductImageGallery({
             </div>
 
             {/* Thumbnails */}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex gap-2 overflow-x-auto scroll-smooth snap-x scrollbar-hide touch-pan-x+  pb-1">
                 {images.map((url, index) => (
                     <button
                         key={url}

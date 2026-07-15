@@ -162,6 +162,17 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
+/* Hide scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
 
 /* Scrollbar custom */
 ::-webkit-scrollbar {
@@ -215,4 +226,8 @@ h1, h2, h3, h4, h5, h6 {
   .pr-safe {
     padding-right: env(safe-area-inset-right, 0px);
   }
+
 }
+
+
+

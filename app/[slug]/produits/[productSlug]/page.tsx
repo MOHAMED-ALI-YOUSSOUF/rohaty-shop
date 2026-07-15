@@ -164,12 +164,7 @@ export default async function PublicProductPage({ params }: ProductPageParams) {
       } as React.CSSProperties}
       className="min-h-screen flex flex-col font-sans"
     >
-      <StoreHeader
-        store={store}
-        primaryColor={primaryColor}
-        textColor={textColor}
-        secondaryTextColor={secondaryTextColor}
-      />
+
 
       <main className="flex-1 w-full pb-6">
         {/* Fil d'ariane */}
@@ -197,7 +192,7 @@ export default async function PublicProductPage({ params }: ProductPageParams) {
 
         {/* Grille principale */}
         <div className="max-w-7xl mx-2 lg:mx-8 py-4">
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-2 gap-8 min-w-0">
             <ProductImageGallery
               images={images}
               productName={product.name}
@@ -206,7 +201,7 @@ export default async function PublicProductPage({ params }: ProductPageParams) {
               discountPct={discountPct}
             />
 
-            <div className="space-y-5">
+            <div className="space-y-5 min-w-0">
               <div className="flex justify-between">
                 <h1 className="text-lg font-semibold leading-snug">{product.name}</h1>
                 {product.category && (
@@ -234,9 +229,9 @@ export default async function PublicProductPage({ params }: ProductPageParams) {
               </div>
 
               {product.description && (
-                <div className="pt-3 border-t border-white/5 w-[90vw]">
+                <div className="pt-3 border-t border-white/5 w-full max-w-full">
                   <p
-                    className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                    className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere"
                     style={{ color: secondaryTextColor }}
                   >
                     {product.description}

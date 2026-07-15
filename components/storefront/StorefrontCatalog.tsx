@@ -67,40 +67,65 @@ export function StorefrontCatalog({
     <>
       {/* Barre catégories sticky */}
       {allCategories.length > 0 && (
-        <div className="sticky top-0 z-50 bg-bg-base/80 backdrop-blur-xl border-b border-white/5">
+        <div
+          className="sticky top-0 z-50 backdrop-blur-xl"
+          style={{
+            borderColor: `${primaryColor}20`,
+          }}
+        >
           <div className="px-3 py-2">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x">
+            <div
+              className="flex gap-2 overflow-x-auto scroll-smooth snap-x scrollbar-hide touch-pan-x"
+            >
+              {/* Toutes les catégories */}
               <button
                 onClick={() => setActiveCategory('')}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start transition-all',
+                className="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start transition-all duration-200"
+                style={
                   !activeCategory
-                    ? 'text-white'
-                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                )}
-                style={!activeCategory ? { backgroundColor: primaryColor } : undefined}
+                    ? {
+                      backgroundColor: primaryColor,
+                      color: '#FFFFFF',
+                      boxShadow: `0 4px 12px ${primaryColor}40`,
+                    }
+                    : {
+                      backgroundColor: cardColor,
+                      color: textColor,
+                      border: `1px solid ${primaryColor}20`,
+                    }
+                }
               >
                 Tous
               </button>
 
               {allCategories.map((cat) => {
-                const isActive = activeCategory?.toLowerCase() === cat.toLowerCase()
+                const isActive =
+                  activeCategory.toLowerCase() === cat.toLowerCase()
+
                 return (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(isActive ? '' : cat)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start transition-all',
+                    className="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start transition-all duration-200"
+                    style={
                       isActive
-                        ? 'text-white'
-                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                    )}
-                    style={isActive ? { backgroundColor: primaryColor } : undefined}
+                        ? {
+                          backgroundColor: primaryColor,
+                          color: '#FFFFFF',
+                          boxShadow: `0 4px 12px ${primaryColor}40`,
+                        }
+                        : {
+                          backgroundColor: cardColor,
+                          color: textColor,
+                          border: `1px solid ${primaryColor}20`,
+                        }
+                    }
                   >
                     {cat}
                   </button>
                 )
               })}
+
             </div>
           </div>
         </div>
