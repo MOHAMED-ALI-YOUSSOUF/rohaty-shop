@@ -6,24 +6,24 @@ type CompressionProfile = 'product' | 'logo' | 'banner'
 const profiles: Record<CompressionProfile, Parameters<typeof imageCompression>[1]> = {
   product: {
     maxSizeMB: 0.8,          // produit : 800 Ko max
-    maxWidthOrHeight: 1200,
+    maxWidthOrHeight: 1600,
     useWebWorker: true,
     fileType: 'image/webp',
-    initialQuality: 0.82,
+    initialQuality: 0.90,
   },
   logo: {
-    maxSizeMB: 0.2,          // logo : 200 Ko max (souvent petit)
-    maxWidthOrHeight: 400,
+    maxSizeMB: 0.3,          // logo : 200 Ko max (souvent petit)
+    maxWidthOrHeight: 500,
     useWebWorker: true,
     fileType: 'image/webp',
-    initialQuality: 0.85,
+    initialQuality: 0.92,
   },
   banner: {
-    maxSizeMB: 0.5,          // bannière : 500 Ko max
-    maxWidthOrHeight: 1400,
+    maxSizeMB: 1,          // bannière : 500 Ko max
+    maxWidthOrHeight: 1920,
     useWebWorker: true,
     fileType: 'image/webp',
-    initialQuality: 0.80,
+    initialQuality: 0.90,
   },
 }
 

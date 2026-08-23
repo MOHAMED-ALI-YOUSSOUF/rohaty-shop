@@ -25,8 +25,8 @@ export default function ResetPage() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                userId: '',
-                password: '',
+                userId: 'fc2a1e71-4f0d-4929-a515-3341429e440f',
+                password: 'hajiya2026',
             }),
         })
 
