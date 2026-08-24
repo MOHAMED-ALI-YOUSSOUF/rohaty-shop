@@ -40,7 +40,15 @@ export function ProductImageGallery({
         return (
             <div className="w-full">
                 <div className="relative aspect-square bg-white/5 rounded-xl overflow-hidden">
-                    <Image src={images[0]} alt={productName} fill className="object-cover" priority />
+                    <Image
+                        src={images[0]}
+                        alt={productName}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 50vw"
+                        className="object-contain"
+                        quality={90}
+                        priority
+                    />
                     {hasDiscount && (
                         <div
                             className="absolute top-3 left-3 text-white text-xs font-bold px-2 py-1 rounded"
@@ -63,9 +71,10 @@ export function ProductImageGallery({
                     src={images[activeIndex]}
                     alt={`${productName} - ${activeIndex + 1}`}
                     fill
-                    className="object-cover transition-opacity duration-300"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 50vw"
+                    className="object-contain transition-opacity duration-300"
+                    quality={90}
                     priority={activeIndex === 0}
-                    unoptimized
                 />
 
                 {hasDiscount && (

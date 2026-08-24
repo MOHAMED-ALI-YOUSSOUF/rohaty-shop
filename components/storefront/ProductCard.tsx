@@ -70,6 +70,7 @@ export function ProductCard({
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="object-cover"
+            quality={85}
           />
         ) : (
           <div className="flex flex-col items-center justify-center text-text-muted opacity-40">

@@ -26,8 +26,8 @@ export async function uploadImage(
       {
         folder,
         resource_type: 'image',
-        quality: 'auto',
-        fetch_format: 'auto',
+        // Pas de quality/fetch_format — l'image est déjà compressée en WebP
+        // côté client (browser-image-compression). Cloudinary = stockage pur.
       },
       (error, result) => {
         if (error) reject(error)

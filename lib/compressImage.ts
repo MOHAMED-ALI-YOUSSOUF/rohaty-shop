@@ -5,21 +5,21 @@ type CompressionProfile = 'product' | 'logo' | 'banner'
 
 const profiles: Record<CompressionProfile, Parameters<typeof imageCompression>[1]> = {
   product: {
-    maxSizeMB: 0.8,          // produit : 800 Ko max
-    maxWidthOrHeight: 1600,
+    maxSizeMB: 2,            // WebP compense bien — pas de limite agressive
+    maxWidthOrHeight: 2000,  // Préserve les images ≤ 2000 px (ex: 903×1645 reste intacte)
     useWebWorker: true,
     fileType: 'image/webp',
     initialQuality: 0.90,
   },
   logo: {
-    maxSizeMB: 0.3,          // logo : 200 Ko max (souvent petit)
-    maxWidthOrHeight: 500,
+    maxSizeMB: 0.5,          // logos : petit mais net
+    maxWidthOrHeight: 600,
     useWebWorker: true,
     fileType: 'image/webp',
     initialQuality: 0.92,
   },
   banner: {
-    maxSizeMB: 1,          // bannière : 500 Ko max
+    maxSizeMB: 2,            // bannières larges — qualité prioritaire
     maxWidthOrHeight: 1920,
     useWebWorker: true,
     fileType: 'image/webp',

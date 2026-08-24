@@ -43,8 +43,9 @@ export function StoreHeader({
             alt=""
             fill
             priority
+            sizes="100vw"
             className="object-cover"
-            unoptimized
+            quality={80}
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 opacity-70" />
