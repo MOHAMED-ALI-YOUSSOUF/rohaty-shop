@@ -14,13 +14,14 @@ import { slugify } from '@/lib/utils'
 import { Loader2, ArrowLeft, Trash2, AlertTriangle, Info, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import * as Dialog from '@radix-ui/react-dialog'
+import type { Category } from '@/lib/categories'
 
 const productSchema = z.object({
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
   price: z.coerce.number().min(0, 'Le prix doit être positif'),
   listPrice: z.coerce.number().min(0, 'Le prix barré doit être positif').optional(),
   description: z.string().max(1000, 'La description ne doit pas dépasser 1000 caractères').optional(),
-  category: z.string().max(50, 'La catégorie ne doit pas dépasser 50 caractères').optional(),
+  categoryId: z.string().min(1, 'Veuillez sélectionner une catégorie obligatoire'),
   isPublished: z.boolean().default(true),
 }).refine(
   (data) => {
@@ -54,6 +55,7 @@ interface Product {
   list_price: number
   image_url: string | null
   category: string | null
+  category_id?: string | null
   is_published: boolean
   created_at: string
   product_images?: ProductImage[]
@@ -61,9 +63,10 @@ interface Product {
 
 interface EditProductFormProps {
   product: Product
+  categories: Category[]
 }
 
-export function EditProductForm({ product }: EditProductFormProps) {
+export function EditProductForm({ product, categories }: EditProductFormProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -81,12 +84,14 @@ export function EditProductForm({ product }: EditProductFormProps) {
         .sort((a, b) => a.position - b.position)
         .map((img) => ({ url: img.url, isPrimary: img.is_primary }))
     }
-    // Fallback : produit migré avec une seule image_url
     if (product.image_url) {
       return [{ url: product.image_url, isPrimary: true }]
     }
     return []
   })
+
+  // Résoudre le categoryId initial
+  const initialCategoryId = product.category_id || categories.find(c => c.name === product.category)?.id || ''
 
   const {
     register,
@@ -100,7 +105,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
       price: product.price,
       listPrice: product.list_price || undefined,
       description: product.description || '',
-      category: product.category || '',
+      categoryId: initialCategoryId,
       isPublished: product.is_published,
     },
   })
@@ -133,7 +138,11 @@ export function EditProductForm({ product }: EditProductFormProps) {
 
       const primaryImage = productImages.find((img) => img.isPrimary)
 
-      // 1. Mettre à jour le produit (image_url = cache de la principale)
+      // Récupérer le nom de la catégorie officielle
+      const selectedCat = categories.find(c => c.id === data.categoryId)
+      const categoryName = selectedCat ? selectedCat.name : null
+
+      // 1. Mettre à jour le produit avec category_id et category
       const { error: updateError } = await supabase
         .from('products')
         .update({
@@ -142,7 +151,8 @@ export function EditProductForm({ product }: EditProductFormProps) {
           price: data.price,
           list_price: data.listPrice ?? null,
           description: data.description?.trim() || null,
-          category: data.category?.trim() || null,
+          category_id: data.categoryId,
+          category: categoryName,
           image_url: primaryImage?.url || null,
           is_published: data.isPublished,
         })
@@ -151,7 +161,6 @@ export function EditProductForm({ product }: EditProductFormProps) {
       if (updateError) throw updateError
 
       // 2. Remplacer toutes les images : supprimer puis réinsérer
-      // (plus simple que de differ les changements + gère le réordonnement)
       const { error: deleteImagesError } = await supabase
         .from('product_images')
         .delete()
@@ -175,9 +184,10 @@ export function EditProductForm({ product }: EditProductFormProps) {
 
       router.push('/dashboard/produits')
       router.refresh()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      setError(err.message || 'Une erreur est survenue lors de la mise à jour du produit.')
+      const msg = err instanceof Error ? err.message : 'Une erreur est survenue lors de la mise à jour du produit.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -187,7 +197,6 @@ export function EditProductForm({ product }: EditProductFormProps) {
     setIsDeleting(true)
     setDeleteError(null)
     try {
-      // product_images se supprime en cascade (ON DELETE CASCADE)
       const { error: deleteError } = await supabase
         .from('products')
         .delete()
@@ -198,8 +207,9 @@ export function EditProductForm({ product }: EditProductFormProps) {
       setIsDeleteDialogOpen(false)
       router.push('/dashboard/produits')
       router.refresh()
-    } catch (err: any) {
-      setDeleteError(err.message || 'Impossible de supprimer le produit.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Impossible de supprimer le produit.'
+      setDeleteError(msg)
     } finally {
       setIsDeleting(false)
     }
@@ -215,7 +225,6 @@ export function EditProductForm({ product }: EditProductFormProps) {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
           {/* Colonne Images */}
           <div className="md:col-span-1 space-y-4">
             <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
@@ -234,7 +243,6 @@ export function EditProductForm({ product }: EditProductFormProps) {
           {/* Colonne Formulaire */}
           <div className="md:col-span-2 space-y-6">
             <GlassCard className="p-6 space-y-5">
-
               {/* Nom */}
               <div>
                 <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
@@ -282,7 +290,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
-                      Prix barré / d'origine
+                      Prix barré / d&apos;origine
                     </label>
                     <span title="Optionnel. Affiche un prix barré pour mettre en valeur une promotion.">
                       <HelpCircle className="w-3.5 h-3.5 text-text-muted" />
@@ -305,19 +313,29 @@ export function EditProductForm({ product }: EditProductFormProps) {
                 </div>
               </div>
 
-              {/* Catégorie */}
+              {/* Catégorie Officielle */}
               <div>
                 <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
-                  Catégorie
+                  Catégorie *
                 </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Accessoires, Vêtements, Électronique"
-                  {...register('category')}
-                  className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm"
-                />
-                {errors.category && (
-                  <p className="text-xs text-red-400 mt-1.5">{errors.category.message}</p>
+                <select
+                  {...register('categoryId')}
+                  className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm cursor-pointer"
+                >
+                  <option value="" disabled className="bg-slate-900 text-slate-400">
+                    Sélectionnez la catégorie du produit...
+                  </option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id} className="bg-slate-900 text-white py-1">
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-text-muted mt-1.5">
+                  Sélectionnez la catégorie officielle correspondant au produit.
+                </p>
+                {errors.categoryId && (
+                  <p className="text-xs text-red-400 mt-1.5">{errors.categoryId.message}</p>
                 )}
               </div>
 
@@ -360,7 +378,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
                 href="/dashboard/produits"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white hover:scale-[1.02] active:scale-[0.98] transition-all text-center"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white hover:scale-[1.02] active:scale-[0.98] transition-all text-center"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Retour
@@ -369,7 +387,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
               <button
                 type="button"
                 onClick={() => setIsDeleteDialogOpen(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:scale-[1.02] active:scale-[0.98] transition-all text-center cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold bg-danger/10 hover:bg-danger/20 border border-danger/20 text-red-400 transition-all cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 Supprimer
@@ -387,7 +405,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
                     Enregistrement...
                   </>
                 ) : (
-                  'Enregistrer'
+                  'Enregistrer les modifications'
                 )}
               </GradientButton>
             </div>
@@ -395,49 +413,45 @@ export function EditProductForm({ product }: EditProductFormProps) {
         </div>
       </form>
 
-      {/* Dialog suppression — inchangé */}
+      {/* Modal de suppression */}
       <Dialog.Root open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md p-6 rounded-2xl bg-bg-surface border border-white/10 text-white shadow-2xl z-50 space-y-4 focus:outline-none">
-            <div className="flex items-center gap-3 text-red-400">
-              <span className="p-2.5 rounded-lg bg-danger/10 shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </span>
-              <div>
-                <Dialog.Title className="text-lg font-bold font-heading">
-                  Supprimer le produit ?
-                </Dialog.Title>
-                <Dialog.Description className="text-xs text-text-secondary mt-0.5">
-                  Cette action est irréversible.
-                </Dialog.Description>
+          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 rounded-2xl bg-bg-surface border border-white/10 shadow-2xl z-50 focus:outline-none">
+            <div className="flex items-center gap-3 text-red-400 mb-4">
+              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-danger" />
               </div>
+              <Dialog.Title className="text-lg font-bold text-white font-heading">
+                Supprimer le produit ?
+              </Dialog.Title>
             </div>
 
-            <p className="text-sm text-text-secondary leading-relaxed">
-              Êtes-vous sûr de vouloir supprimer définitivement{' '}
-              <span className="text-white font-semibold">"{product.name}"</span> de votre catalogue ?
-            </p>
+            <Dialog.Description className="text-sm text-text-secondary leading-relaxed mb-6">
+              Êtes-vous sûr de vouloir supprimer <strong className="text-white">« {product.name} »</strong> ? Cette action est irréversible.
+            </Dialog.Description>
 
             {deleteError && (
-              <p className="text-xs text-red-400 p-3 rounded-lg bg-danger/10 border border-danger/20">
+              <div className="p-3 mb-4 rounded-lg bg-danger/10 border border-danger/20 text-xs text-red-400">
                 {deleteError}
-              </p>
+              </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3">
               <Dialog.Close asChild>
                 <button
-                  disabled={isDeleting}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
+                  type="button"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-white transition-colors"
                 >
                   Annuler
                 </button>
               </Dialog.Close>
+
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-danger hover:bg-danger/90 text-white transition-all flex items-center gap-1.5 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-danger hover:bg-danger/90 text-white transition-colors cursor-pointer"
               >
                 {isDeleting ? (
                   <>
@@ -445,7 +459,7 @@ export function EditProductForm({ product }: EditProductFormProps) {
                     Suppression...
                   </>
                 ) : (
-                  'Supprimer'
+                  'Confirmer la suppression'
                 )}
               </button>
             </div>

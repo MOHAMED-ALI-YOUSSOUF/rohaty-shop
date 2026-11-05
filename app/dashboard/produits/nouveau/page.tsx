@@ -1,20 +1,25 @@
 // app/dashboard/produits/nouveau/page.tsx
-// AVANT : refaisait auth.getUser() + stores.select
-// APRÈS : cache React partagé depuis le layout
-
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { NewProductForm } from './NewProductForm'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import type { Category } from '@/lib/categories'
 
 export default async function NouveauProduitPage() {
-  // ✅ Cache React — pas de double appel auth
   const user = await getCurrentUser()
   if (!user) redirect('/connexion')
 
   const store = await getCurrentStore(user.id)
   if (!store) redirect('/dashboard')
+
+  const supabase = await createClient()
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name, slug, position, is_active, image_url')
+    .eq('is_active', true)
+    .order('position', { ascending: true })
 
   return (
     <div className="space-y-6 max-w-8xl mx-auto">
@@ -33,7 +38,10 @@ export default async function NouveauProduitPage() {
         </p>
       </div>
 
-      <NewProductForm storeId={store.id} />
+      <NewProductForm 
+        storeId={store.id} 
+        categories={(categories as Category[]) || []} 
+      />
     </div>
   )
 }

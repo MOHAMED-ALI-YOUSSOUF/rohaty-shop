@@ -7,21 +7,20 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
-import { ImageUpload } from '@/components/shared/ImageUpload'
 import { GradientButton } from '@/components/shared/GradientButton'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { slugify } from '@/lib/utils'
 import { Loader2, ArrowLeft, Info, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import { MultiImageUpload, type UploadedImage } from '@/components/shared/MultiImageUpload'
+import type { Category } from '@/lib/categories'
 
 const productSchema = z.object({
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
   price: z.coerce.number().min(0, 'Le prix doit être positif'),
   listPrice: z.coerce.number().min(0, 'Le prix barré doit être positif').optional(),
   description: z.string().max(1000, 'La description ne doit pas dépasser 1000 caractères').optional(),
-  category: z.string().max(50, 'La catégorie ne doit pas dépasser 50 caractères').optional(),
-  // imageUrl: z.string().optional(),
+  categoryId: z.string().min(1, 'Veuillez sélectionner une catégorie obligatoire'),
   isPublished: z.boolean().default(true),
 }).refine(
   (data) => {
@@ -40,9 +39,10 @@ type ProductFormData = z.infer<typeof productSchema>
 
 interface NewProductFormProps {
   storeId: string
+  categories: Category[]
 }
 
-export function NewProductForm({ storeId }: NewProductFormProps) {
+export function NewProductForm({ storeId, categories }: NewProductFormProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -54,19 +54,17 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
   const {
     register,
     handleSubmit,
-    setValue,
     watch,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
       isPublished: true,
-      // imageUrl: '',
+      categoryId: '',
     },
   })
 
   const nameValue = watch('name')
-  // const imageUrlValue = watch('imageUrl')
 
   // Auto-génération du slug en direct à partir du nom
   useEffect(() => {
@@ -92,12 +90,14 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
         .eq('slug', slug)
         .maybeSingle()
 
-      // Si le slug existe, on lui ajoute un suffixe aléatoire pour éviter l'erreur de contrainte unique
       const finalSlug = existingProduct ? `${slug}-${Math.floor(100 + Math.random() * 900)}` : slug
-
       const primaryImage = productImages.find(img => img.isPrimary)
 
-      // 2. Insérer le produit en base
+      // Récupérer le nom de la catégorie officielle sélectionnée
+      const selectedCategory = categories.find(c => c.id === data.categoryId)
+      const categoryName = selectedCategory ? selectedCategory.name : null
+
+      // 2. Insérer le produit en base avec category_id (clé étrangère) et category (nom officiel)
       const { data: newProduct, error: insertError } = await supabase
         .from('products')
         .insert({
@@ -107,8 +107,9 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
           price: data.price,
           list_price: data.listPrice ?? null,
           description: data.description?.trim() || null,
-          category: data.category?.trim() || null,
-          image_url: primaryImage?.url || null, // cache de la principale
+          category_id: data.categoryId,
+          category: categoryName,
+          image_url: primaryImage?.url || null,
           is_published: data.isPublished,
         })
         .select('id')
@@ -131,9 +132,10 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
 
       router.push('/dashboard/produits')
       router.refresh()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      setError(err.message || 'Une erreur est survenue lors de la création du produit.')
+      const msg = err instanceof Error ? err.message : 'Une erreur est survenue lors de la création du produit.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -154,12 +156,6 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
             Image du produit
           </label>
           <GlassCard className="p-4 flex flex-col items-center justify-center">
-            {/* <ImageUpload
-              folder="rohaty-shop/products"
-              currentUrl={imageUrlValue}
-              onUpload={(url) => setValue('imageUrl', url)}
-              aspectRatio="square"
-            /> */}
             <MultiImageUpload
               folder="rohaty-shop/products"
               images={productImages}
@@ -224,7 +220,7 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
-                    Prix barré / d'origine
+                    Prix barré / d&apos;origine
                   </label>
                   <span title="Optionnel. Affiche un prix barré pour mettre en valeur une promotion.">
                     <HelpCircle className="w-3.5 h-3.5 text-text-muted" />
@@ -247,22 +243,29 @@ export function NewProductForm({ storeId }: NewProductFormProps) {
               </div>
             </div>
 
-            {/* Catégorie */}
+            {/* Catégorie Officielle (Select déroulant unique obligatoire) */}
             <div>
               <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
-                Catégorie
+                Catégorie *
               </label>
-              <input
-                type="text"
-                placeholder="Ex: Accessoires, Vêtements, Électronique"
-                {...register('category')}
-                className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm"
-              />
+              <select
+                {...register('categoryId')}
+                className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm cursor-pointer"
+              >
+                <option value="" disabled className="bg-slate-900 text-slate-400">
+                  Sélectionnez la catégorie du produit...
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id} className="bg-slate-900 text-white py-1">
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
               <p className="text-[10px] text-text-muted mt-1.5">
-                Texte libre. Vos clients pourront filtrer vos produits par cette catégorie sur votre vitrine.
+                Sélectionnez la catégorie officielle correspondant au produit. Une seule catégorie par produit.
               </p>
-              {errors.category && (
-                <p className="text-xs text-red-400 mt-1.5">{errors.category.message}</p>
+              {errors.categoryId && (
+                <p className="text-xs text-red-400 mt-1.5">{errors.categoryId.message}</p>
               )}
             </div>
 

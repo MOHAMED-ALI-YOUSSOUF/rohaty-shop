@@ -3,43 +3,39 @@
 /* ─── DESIGN SYSTEM — Rohaty Shop ─────────────────────────────────────────── */
 
 @theme inline {
-  /* Fonts */
+
   --font-heading: var(--font-space-grotesk);
   --font-body:    var(--font-inter);
   --font-sans:    var(--font-inter);
 
-  /* Background colors */
-  --color-bg-base:    #0F172A;
-  --color-bg-surface: #1E293B;
-  --color-bg-input:   #162032;
-  --color-bg-muted:   #0D1526;
+  --color-bg-base:    #FFFFFF;
+  --color-bg-surface: #F8FAFC;
+  --color-bg-input:   #F1F5F9;
+  --color-bg-muted:   #F8FAFC;
 
-  /* Brand colors */    
+
   --color-primary:   #2563EB;
-  --color-secondary: #06B6D4;
-  --color-accent:    #8B5CF6;
+  --color-secondary: #1D4ED8;
+  --color-accent:    #3B82F6;
   --color-success:   #10B981;
   --color-warning:   #F59E0B;
   --color-danger:    #EF4444;
 
-  /* Text colors */
-  --color-text-primary:   #FFFFFF;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted:     #475569;
+  --color-text-primary:   #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94A3B8;
 
-  /* Border */
-  --color-border:       rgba(255,255,255,0.08);
+  --color-border:       rgba(15,23,42,0.08);
   --color-border-focus: rgba(37,99,235,0.5);
 }
 
 /* ─── BASE STYLES ──────────────────────────────────────────────────────────── */
 
 :root {
-  --background: #0F172A;
-  --foreground: #FFFFFF;
-   /* Hauteur totale du header = pill (py-3 ≈ 24px + logo 36px = ~60px) + gap top (16px) + notch */
-  --header-inner-height: 68px;
-  --header-top-gap: 16px;
+  --background: #FFFFFF;
+  --foreground: #0F172A;
+  --header-inner-height: 64px;
+  --header-top-gap: 0px;
   --header-total-height: calc(
     env(safe-area-inset-top, 0px) + var(--header-top-gap) + var(--header-inner-height)
   );
@@ -107,11 +103,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Glassmorphism */
 .glass {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
+
+::-webkit-scrollbar-track { background: #FFFFFF; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2563EB; }
 
 /* Gradient border glow au hover */
 .card-glow {

@@ -1,11 +1,9 @@
 // app/dashboard/produits/[id]/page.tsx
-// AVANT : refaisait auth.getUser() + stores.select
-// APRÈS : cache React partagé depuis le layout
-
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { EditProductForm } from './EditProductForm'
+import type { Category } from '@/lib/categories'
 
 interface ModifierProduitPageProps {
   params: Promise<{ id: string }>
@@ -16,31 +14,38 @@ export default async function ModifierProduitPage({
 }: ModifierProduitPageProps) {
   const { id } = await params
 
-  // ✅ Cache React — pas de double appel auth
   const user = await getCurrentUser()
   if (!user) redirect('/connexion')
 
   const store = await getCurrentStore(user.id)
   if (!store) redirect('/dashboard')
 
-  // Récupérer le produit à modifier (query propre à cette page)
   const supabase = await createClient()
-  const { data: product } = await supabase
-    .from('products')
-    .select(
+
+  // Fetch produit + images + catégories officielles
+  const [{ data: product }, { data: categories }] = await Promise.all([
+    supabase
+      .from('products')
+      .select(
+        `
+        *,
+        product_images (
+          id,
+          url,
+          position,
+          is_primary
+        )
       `
-      *,
-      product_images (
-        id,
-        url,
-        position,
-        is_primary
       )
-    `
-    )
-    .eq('id', id)
-    .eq('store_id', store.id)
-    .single()
+      .eq('id', id)
+      .eq('store_id', store.id)
+      .single(),
+    supabase
+      .from('categories')
+      .select('id, name, slug, position, is_active, image_url')
+      .eq('is_active', true)
+      .order('position', { ascending: true })
+  ])
 
   if (!product) redirect('/dashboard/produits')
 
@@ -55,7 +60,10 @@ export default async function ModifierProduitPage({
         </p>
       </div>
 
-      <EditProductForm product={product} />
+      <EditProductForm 
+        product={product} 
+        categories={(categories as Category[]) || []} 
+      />
     </div>
   )
 }

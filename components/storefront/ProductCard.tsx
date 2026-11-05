@@ -1,50 +1,54 @@
 // components/storefront/ProductCard.tsx
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { motion } from 'framer-motion'
-import { ShoppingBag } from 'lucide-react'
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import { ShoppingBag } from "lucide-react";
 
 interface Product {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  price: number
-  list_price: number
-  image_url: string | null
-  category: string | null
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  list_price: number;
+  image_url: string | null;
+  category: string | null;
 }
 
 interface ProductCardProps {
-  product: Product
-  whatsappUrl: string
-  primaryColor: string
-  storeSlug: string
-  textColor: string
-  secondaryTextColor: string
-  cardColor: string
+  product: Product;
+  whatsappUrl: string;
+  primaryColor: string;
+  storeSlug: string;
+  textColor: string;
+  secondaryTextColor: string;
+  cardColor: string;
 }
 
 export function ProductCard({
   product,
   whatsappUrl,
-  primaryColor = '#2563EB',
+  primaryColor = "#2563EB",
   storeSlug,
-  textColor = '#FFFFFF',
-  secondaryTextColor = '#94A3B8',
-  cardColor = '#1E293B',
+  textColor = "#FFFFFF",
+  secondaryTextColor = "#94A3B8",
+  cardColor = "#1E293B",
 }: ProductCardProps) {
-  const [isHovered, setIsHovered] = useState(false)
-  const hasDiscount = product.list_price > product.price
+  const [isHovered, setIsHovered] = useState(false);
+  const hasDiscount = product.list_price > product.price;
+
+  const discountPercent = hasDiscount
+    ? Math.round((1 - product.price / product.list_price) * 100)
+    : 0;
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR').format(price)
-  }
+    return new Intl.NumberFormat("fr-FR").format(price);
+  };
 
-  const productDetailUrl = `/${storeSlug}/produits/${product.slug}`
+  const productDetailUrl = `/${storeSlug}/produits/${product.slug}`;
 
   return (
     <motion.div
@@ -53,10 +57,14 @@ export function ProductCard({
       className="rounded-xl border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-200"
       style={{ backgroundColor: cardColor }}
       animate={{
-        borderColor: isHovered ? `${primaryColor}40` : 'rgba(255, 255, 255, 0.05)',
-        boxShadow: isHovered ? `0 4px 16px ${primaryColor}20` : `0 4px 12px ${primaryColor}10`,
+        borderColor: isHovered
+          ? `${primaryColor}40`
+          : "rgba(255, 255, 255, 0.05)",
+        boxShadow: isHovered
+          ? `0 4px 16px ${primaryColor}20`
+          : `0 4px 12px ${primaryColor}10`,
       }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
     >
       {/* Image produit */}
       <Link
@@ -78,12 +86,12 @@ export function ProductCard({
           </div>
         )}
 
-        {hasDiscount && (
+        {discountPercent > 0 && (
           <span
-            className="absolute top-1.5 left-1.5 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded select-none leading-none"
+            className="absolute top-0 left-0 text-white text-[10px] font-extrabold px-2 py-1 rounded-br-lg select-none leading-none"
             style={{ backgroundColor: primaryColor }}
           >
-            PROMO
+            -{discountPercent}%
           </span>
         )}
       </Link>
@@ -91,7 +99,10 @@ export function ProductCard({
       {/* Infos produit — compact, comme le mockup */}
       <div className="p-2 space-y-1.5 flex flex-col flex-1">
         <Link href={productDetailUrl}>
-          <p className="text-[11px] font-semibold truncate leading-tight" style={{ color: textColor }}>
+          <p
+            className="text-[11px] font-semibold truncate leading-tight"
+            style={{ color: textColor }}
+          >
             {product.name}
           </p>
         </Link>
@@ -104,7 +115,10 @@ export function ProductCard({
             {formatPrice(product.price)} DJF
           </span>
           {hasDiscount && (
-            <span className="text-[9px] line-through" style={{ color: secondaryTextColor }}>
+            <span
+              className="text-[9px] line-through"
+              style={{ color: secondaryTextColor }}
+            >
               {formatPrice(product.list_price)} DJF
             </span>
           )}
@@ -115,11 +129,11 @@ export function ProductCard({
           target="_blank"
           rel="noopener noreferrer"
           className="w-full py-1.5 rounded text-[10px] font-bold text-white text-center cursor-pointer mt-auto active:scale-95 transition-transform"
-          style={{ backgroundColor: '#10B981' }}
+          style={{ backgroundColor: "#10B981" }}
         >
           💬 Commander
         </a>
       </div>
     </motion.div>
-  )
+  );
 }

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, ShoppingBag, Store, Palette, ExternalLink, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Store, Palette, ExternalLink, LogOut, Menu, X, Layers } from 'lucide-react'
 import { useState } from 'react'
 
 interface SidebarProps {
@@ -30,6 +30,11 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
       label: 'Mes produits',
       href: '/dashboard/produits',
       icon: ShoppingBag,
+    },
+    {
+      label: 'Catégories',
+      href: '/dashboard/categories',
+      icon: Layers,
     },
     {
       label: 'Ma boutique',

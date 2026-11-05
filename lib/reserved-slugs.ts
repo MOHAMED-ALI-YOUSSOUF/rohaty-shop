@@ -16,6 +16,9 @@ export const RESERVED_SLUGS = [
   'settings',
   'support',
   'help',
+  'produits',
+  'boutiques',
+  'reset',
 ] as const
 
 /**
