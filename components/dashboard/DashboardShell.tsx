@@ -18,7 +18,7 @@ export function DashboardShell({ children, storeName, storeSlug, fullName }: Das
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex bg-[#0F172A] text-white overflow-hidden">
+    <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-hidden font-sans">
       {/* Desktop Sidebar */}
       <Sidebar
         storeName={storeName}
@@ -43,17 +43,15 @@ export function DashboardShell({ children, storeName, storeSlug, fullName }: Das
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 bottom-0 left-0 w-[240px] z-40 lg:hidden shadow-2xl h-screen"
+              className="fixed top-0 bottom-0 left-0 w-[240px] z-40 lg:hidden shadow-2xl h-screen bg-white"
               style={{
-                // Le drawer mobile démarre sous la notch
                 paddingTop: 'env(safe-area-inset-top, 0px)',
               }}
             >
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="absolute p-2 rounded-lg bg-bg-surface border border-white/5 hover:bg-white/5 text-text-secondary hover:text-white transition-colors"
+                className="absolute p-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors"
                 style={{
-                  // Positionne le bouton X sous la notch + un petit gap
                   top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
                   right: '16px',
                 }}
@@ -73,20 +71,19 @@ export function DashboardShell({ children, storeName, storeSlug, fullName }: Das
         )}
       </AnimatePresence>
 
-      {/* Main Content Area — h-screen avec overflow pour que Header sticky fonctionne */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <Header
           fullName={fullName}
           storeSlug={storeSlug}
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-[#0F172A] relative"
+        <main
+          className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-slate-50 relative"
           style={{
-            // Safe area bottom : barre de geste iOS en bas
             paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 0px))',
           }}
         >
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] rounded-full bg-blue-900/10 blur-[100px] pointer-events-none -z-10" />
           <div className="max-w-6xl mx-auto page-enter">
             {children}
           </div>

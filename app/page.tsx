@@ -2,7 +2,7 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { SiteHeader } from "@/components/shared/SiteHeader";
-import { MarketplacePage } from "@/components/storefront/MarketplacePage";
+import { MarketplacePage, MarketplaceBanner } from "@/components/storefront/MarketplacePage";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { Category } from "@/lib/categories";
@@ -67,29 +67,39 @@ interface RawProduct {
 export default async function HomePage() {
   const supabase = createPublicClient();
 
-  // Requête parallèle : produits publiés + catégories officielles
-  const [{ data: rawProducts, error: pErr }, { data: rawCategories, error: cErr }] =
-    await Promise.all([
-      supabase
-        .from("products")
-        .select(
-          `id, name, slug, description, price, list_price, image_url, category, category_id, is_published,
-           product_images(id, url, position, is_primary),
-           stores!inner(id, slug, name, whatsapp, primary_color, logo_url)`,
-        )
-        .eq("is_published", true)
-        .order("price", { ascending: true }),
-      supabase
-        .from("categories")
-        .select("id, name, slug, position, is_active, image_url")
-        .eq("is_active", true)
-        .order("position", { ascending: true }),
-    ]);
+  // Requête parallèle : produits publiés + catégories officielles + bannières actives
+  const [
+    { data: rawProducts, error: pErr },
+    { data: rawCategories, error: cErr },
+    { data: rawBanners, error: bErr },
+  ] = await Promise.all([
+    supabase
+      .from("products")
+      .select(
+        `id, name, slug, description, price, list_price, image_url, category, category_id, is_published,
+         product_images(id, url, position, is_primary),
+         stores!inner(id, slug, name, whatsapp, primary_color, logo_url)`,
+      )
+      .eq("is_published", true)
+      .order("price", { ascending: true }),
+    supabase
+      .from("categories")
+      .select("id, name, slug, position, is_active, image_url")
+      .eq("is_active", true)
+      .order("position", { ascending: true }),
+    supabase
+      .from("banners")
+      .select("id, image_url, position, is_active")
+      .eq("is_active", true)
+      .order("position", { ascending: true }),
+  ]);
 
   if (pErr) console.error("[/] Products error:", pErr.message, pErr.code);
   if (cErr) console.error("[/] Categories error:", cErr.message, cErr.code);
+  if (bErr) console.error("[/] Banners error:", bErr.message, bErr.code);
 
   const categories = (rawCategories as Category[]) || [];
+  const banners = (rawBanners as MarketplaceBanner[]) || [];
 
   const products = ((rawProducts as unknown as RawProduct[]) || [])
     .filter((p) => !!p.stores)
@@ -137,7 +147,11 @@ export default async function HomePage() {
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans">
       <SiteHeader />
       <main className="flex-1 pt-header">
-        <MarketplacePage products={products} categories={categories} />
+        <MarketplacePage
+          products={products}
+          categories={categories}
+          banners={banners}
+        />
       </main>
       <footer className="border-t border-slate-200 py-5 text-center text-xs text-slate-500">
         © {new Date().getFullYear()} Rohaty Digital —{" "}

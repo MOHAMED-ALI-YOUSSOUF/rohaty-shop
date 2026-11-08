@@ -24,7 +24,7 @@ export function CopyButton({ text }: CopyButtonProps) {
   return (
     <button
       onClick={handleCopy}
-      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 transition-all text-white shrink-0"
+      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 border border-slate-200 active:scale-95 transition-all text-slate-700 shrink-0"
       title="Copier le lien"
     >
       {copied ? (

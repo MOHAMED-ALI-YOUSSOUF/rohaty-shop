@@ -49,6 +49,13 @@ export interface MarketplaceProduct {
   whatsappUrl: string;
 }
 
+export interface MarketplaceBanner {
+  id: string;
+  image_url: string;
+  position: number;
+  is_active: boolean;
+}
+
 export interface MarketplaceStore {
   id: string;
   name: string;
@@ -62,39 +69,9 @@ export interface MarketplaceStore {
 interface MarketplacePageProps {
   products: MarketplaceProduct[];
   categories?: Category[];
+  banners?: MarketplaceBanner[];
   stores?: MarketplaceStore[];
 }
-
-/* ─── Config bannières ─────────────────────────────────────────────────── */
-const BANNERS = [
-  {
-    id: "bienvenue",
-    title: "Découvrez Rohaty Shop",
-    subtitle: "Tous les produits des boutiques djiboutiennes en un seul endroit.",
-    gradient: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 60%, #60A5FA 100%)",
-    image: null as string | null,
-    cta: null as string | null,
-    href: null as string | null,
-  },
-  {
-    id: "whatsapp",
-    title: "Commandez via WhatsApp",
-    subtitle: "Aucun compte requis. Un message pré-rempli s'envoie en un clic.",
-    gradient: "linear-gradient(135deg, #064E3B 0%, #10B981 100%)",
-    image: null,
-    cta: null,
-    href: null,
-  },
-  {
-    id: "hero",
-    title: "Mode, Tech, Beauté & plus",
-    subtitle: "Des milliers de produits sélectionnés par nos commerçants.",
-    gradient: "linear-gradient(135deg, #1E293B 0%, #334155 60%, #475569 100%)",
-    image: "/hero-mobile.jpg",
-    cta: null,
-    href: null,
-  },
-] as const;
 
 /* ─── Utilitaires de tri & shuffle ───────────────────────────────────────── */
 const PAGE_SIZE = 24;
@@ -124,6 +101,7 @@ function sortAndShuffle(products: MarketplaceProduct[]): MarketplaceProduct[] {
 export function MarketplacePage({
   products,
   categories: initialCategories = [],
+  banners = [],
 }: MarketplacePageProps) {
   const [activeCategorySlug, setActiveCategorySlug] = useState("");
   const [search, setSearch] = useState("");
@@ -207,15 +185,15 @@ export function MarketplacePage({
   };
 
   return (
-    <div className="pb-16">
-      {/* ── 1. Carrousel bannières (masqué en mode filtre actif pour clarté) ── */}
-      {!hasFilter && (
-        <div className="px-3 sm:px-6 lg:px-8 pt-3">
-          <BannerCarousel />
+    <div className="pb-16 font-sans">
+      {/* ── 1. Carrousel bannières (images pures, masqué si filtre actif ou si aucune bannière) ── */}
+      {!hasFilter && banners && banners.length > 0 && (
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3">
+          <BannerCarousel banners={banners} />
         </div>
       )}
 
-      {/* ── 2. Catégories officielles avec images circulaires ── */}
+      {/* ── 2. Catégories officielles avec images circulaires (sticky) ── */}
       <OfficialCategoryPills
         categories={officialCategories}
         activeSlug={activeCategorySlug}
@@ -291,26 +269,32 @@ export function MarketplacePage({
   );
 }
 
-/* ─── Carrousel de bannières ─────────────────────────────────────────────── */
+/* ─── Carrousel de bannières (images pures, sans texte superposé) ────────── */
 
-function BannerCarousel() {
+function BannerCarousel({ banners }: { banners: MarketplaceBanner[] }) {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const goTo = useCallback((n: number, dir = 1) => {
-    setDirection(dir);
-    setIndex(((n % BANNERS.length) + BANNERS.length) % BANNERS.length);
-  }, []);
+  const total = banners.length;
+
+  const goTo = useCallback(
+    (n: number, dir = 1) => {
+      if (total === 0) return;
+      setDirection(dir);
+      setIndex(((n % total) + total) % total);
+    },
+    [total]
+  );
 
   // Autoplay
   useEffect(() => {
-    if (paused) return;
-    const id = setInterval(() => goTo(index + 1, 1), 4500);
+    if (paused || total <= 1) return;
+    const id = setInterval(() => goTo(index + 1, 1), 4800);
     return () => clearInterval(id);
-  }, [index, paused, goTo]);
+  }, [index, paused, goTo, total]);
 
   // Pause quand hors du viewport
   useEffect(() => {
@@ -325,13 +309,14 @@ function BannerCarousel() {
   }, []);
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
+    if (touchStartX.current === null || total <= 1) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     if (Math.abs(dx) > 40) goTo(index + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
     touchStartX.current = null;
   };
 
-  const banner = BANNERS[index];
+  if (total === 0) return null;
+  const currentBanner = banners[index] || banners[0];
 
   const variants = {
     enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%", opacity: 0 }),
@@ -342,7 +327,7 @@ function BannerCarousel() {
   return (
     <div
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden h-36 sm:h-44 md:h-52 select-none"
+      className="relative rounded-2xl overflow-hidden h-36 sm:h-52 md:h-64 lg:h-72 select-none shadow-xs bg-slate-100"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
@@ -350,7 +335,7 @@ function BannerCarousel() {
     >
       <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
-          key={banner.id}
+          key={currentBanner.id}
           custom={direction}
           variants={variants}
           initial="enter"
@@ -359,68 +344,52 @@ function BannerCarousel() {
           transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-0"
         >
-          {banner.image && (
-            <Image
-              src={banner.image}
-              alt=""
-              fill
-              sizes="(max-width: 640px) 100vw, 1280px"
-              className="object-cover"
-              quality={80}
-              priority
-            />
-          )}
-          <div
-            className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10"
-            style={{
-              background: banner.image
-                ? "linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 100%)"
-                : banner.gradient,
-            }}
-          >
-            <div className="max-w-xs sm:max-w-md">
-              <h2 className="text-lg sm:text-2xl font-black text-white leading-tight">
-                {banner.title}
-              </h2>
-              <p className="text-xs sm:text-sm text-white/85 mt-1 line-clamp-2">
-                {banner.subtitle}
-              </p>
-            </div>
-          </div>
+          <Image
+            src={currentBanner.image_url}
+            alt="Bannière promotionnelle"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1280px"
+            className="object-cover"
+            priority={index === 0}
+          />
         </motion.div>
       </AnimatePresence>
 
-      {/* Flèches desktop */}
-      <button
-        onClick={() => goTo(index - 1, -1)}
-        aria-label="Bannière précédente"
-        className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white items-center justify-center text-slate-700 transition"
-      >
-        <ChevronLeft className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => goTo(index + 1, 1)}
-        aria-label="Bannière suivante"
-        className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white items-center justify-center text-slate-700 transition"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
-
-      {/* Indicateurs */}
-      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
-        {BANNERS.map((b, i) => (
+      {/* Flèches navigation (si > 1 bannière) */}
+      {total > 1 && (
+        <>
           <button
-            key={b.id}
-            onClick={() => goTo(i, i > index ? 1 : -1)}
-            aria-label={`Aller à la bannière ${i + 1}`}
-            className="h-1.5 rounded-full transition-all duration-300"
-            style={{
-              width: i === index ? "18px" : "6px",
-              backgroundColor: i === index ? "#fff" : "rgba(255,255,255,0.5)",
-            }}
-          />
-        ))}
-      </div>
+            onClick={() => goTo(index - 1, -1)}
+            aria-label="Bannière précédente"
+            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/35 hover:bg-black/60 backdrop-blur-xs items-center justify-center text-white transition cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => goTo(index + 1, 1)}
+            aria-label="Bannière suivante"
+            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/35 hover:bg-black/60 backdrop-blur-xs items-center justify-center text-white transition cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
+          {/* Indicateurs / Dots */}
+          <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 bg-black/25 backdrop-blur-xs px-2.5 py-1 rounded-full">
+            {banners.map((b, i) => (
+              <button
+                key={b.id}
+                onClick={() => goTo(i, i > index ? 1 : -1)}
+                aria-label={`Aller à la bannière ${i + 1}`}
+                className="h-1.5 rounded-full transition-all duration-300 cursor-pointer"
+                style={{
+                  width: i === index ? "18px" : "6px",
+                  backgroundColor: i === index ? "#fff" : "rgba(255,255,255,0.5)",
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

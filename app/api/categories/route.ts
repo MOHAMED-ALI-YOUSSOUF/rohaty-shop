@@ -1,13 +1,10 @@
 // app/api/categories/route.ts
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getAdminSupabase, getAuthenticatedSuperAdmin } from '@/lib/auth/admin'
 import { slugify } from '@/lib/utils'
 
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  return getAdminSupabase()
 }
 
 function getErrorMessage(err: unknown): string {
@@ -58,9 +55,14 @@ export async function GET() {
   }
 }
 
-// POST: Ajouter une nouvelle catégorie officielle
+// POST: Ajouter une nouvelle catégorie officielle (Super Admin uniquement)
 export async function POST(req: Request) {
   try {
+    const adminUser = await getAuthenticatedSuperAdmin()
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Accès réservé au Super Admin.' }, { status: 403 })
+    }
+
     const supabase = getAdminClient()
     const body = await req.json()
     const { name, image_url, position, is_active } = body
@@ -116,9 +118,14 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH: Mettre à jour une catégorie (nom, image, position, statut)
+// PATCH: Mettre à jour une catégorie (Super Admin uniquement)
 export async function PATCH(req: Request) {
   try {
+    const adminUser = await getAuthenticatedSuperAdmin()
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Accès réservé au Super Admin.' }, { status: 403 })
+    }
+
     const supabase = getAdminClient()
     const body = await req.json()
     const { id, name, image_url, position, is_active } = body
@@ -168,9 +175,14 @@ export async function PATCH(req: Request) {
   }
 }
 
-// DELETE: Supprimer une catégorie UNIQUEMENT si aucun produit n'y est associé
+// DELETE: Supprimer une catégorie UNIQUEMENT si aucun produit n'y est associé (Super Admin uniquement)
 export async function DELETE(req: Request) {
   try {
+    const adminUser = await getAuthenticatedSuperAdmin()
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Accès réservé au Super Admin.' }, { status: 403 })
+    }
+
     const supabase = getAdminClient()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')

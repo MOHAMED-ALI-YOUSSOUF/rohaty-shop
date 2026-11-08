@@ -7,6 +7,7 @@ import { z } from 'zod'
  */
 export const RESERVED_SLUGS = [
   'dashboard',
+  'super-admin',
   'connexion',
   'inscription',
   'admin',

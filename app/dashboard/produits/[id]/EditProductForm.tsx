@@ -7,34 +7,39 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
-import { MultiImageUpload, type UploadedImage } from '@/components/shared/MultiImageUpload'
-import { GradientButton } from '@/components/shared/GradientButton'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { slugify } from '@/lib/utils'
-import { Loader2, ArrowLeft, Trash2, AlertTriangle, Info, HelpCircle } from 'lucide-react'
+import { Loader2, ArrowLeft, Trash2, Info, HelpCircle, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import * as Dialog from '@radix-ui/react-dialog'
+import { MultiImageUpload, type UploadedImage } from '@/components/shared/MultiImageUpload'
 import type { Category } from '@/lib/categories'
 
-const productSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
-  price: z.coerce.number().min(0, 'Le prix doit être positif'),
-  listPrice: z.coerce.number().min(0, 'Le prix barré doit être positif').optional(),
-  description: z.string().max(1000, 'La description ne doit pas dépasser 1000 caractères').optional(),
-  categoryId: z.string().min(1, 'Veuillez sélectionner une catégorie obligatoire'),
-  isPublished: z.boolean().default(true),
-}).refine(
-  (data) => {
-    if (data.listPrice !== undefined && data.listPrice > 0) {
-      return data.listPrice >= data.price
+const productSchema = z
+  .object({
+    name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+    slug: z
+      .string()
+      .min(2, 'Le slug doit contenir au moins 2 caractères')
+      .regex(/^[a-z0-9-]+$/, 'Le slug ne peut contenir que des lettres minuscules, chiffres et tirets'),
+    price: z.coerce.number().min(0, 'Le prix doit être positif'),
+    listPrice: z.coerce.number().min(0, 'Le prix barré doit être positif').optional(),
+    description: z.string().max(1000, 'La description ne doit pas dépasser 1000 caractères').optional(),
+    categoryId: z.string().min(1, 'Veuillez sélectionner une catégorie obligatoire'),
+    isPublished: z.boolean().default(true),
+  })
+  .refine(
+    (data) => {
+      if (data.listPrice !== undefined && data.listPrice > 0) {
+        return data.listPrice >= data.price
+      }
+      return true
+    },
+    {
+      message: 'Le prix barré doit être supérieur ou égal au prix de vente',
+      path: ['listPrice'],
     }
-    return true
-  },
-  {
-    message: 'Le prix barré doit être supérieur ou égal au prix de vente',
-    path: ['listPrice'],
-  }
-)
+  )
 
 type ProductFormData = z.infer<typeof productSchema>
 
@@ -52,12 +57,11 @@ interface Product {
   slug: string
   description: string | null
   price: number
-  list_price: number
+  list_price: number | null
   image_url: string | null
   category: string | null
   category_id?: string | null
   is_published: boolean
-  created_at: string
   product_images?: ProductImage[]
 }
 
@@ -72,26 +76,39 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [generatedSlug, setGeneratedSlug] = useState(product.slug)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [generatedSlug, setGeneratedSlug] = useState(product.slug)
 
-  // Initialiser les images depuis product_images, ou fallback sur image_url legacy
-  const [productImages, setProductImages] = useState<UploadedImage[]>(() => {
+  const initialImages: UploadedImage[] = (() => {
     if (product.product_images && product.product_images.length > 0) {
       return [...product.product_images]
         .sort((a, b) => a.position - b.position)
-        .map((img) => ({ url: img.url, isPrimary: img.is_primary }))
+        .map((img) => ({
+          id: img.id,
+          url: img.url,
+          isPrimary: img.is_primary,
+        }))
     }
     if (product.image_url) {
-      return [{ url: product.image_url, isPrimary: true }]
+      return [{ id: 'legacy-img', url: product.image_url, isPrimary: true }]
     }
     return []
-  })
+  })()
 
-  // Résoudre le categoryId initial
-  const initialCategoryId = product.category_id || categories.find(c => c.name === product.category)?.id || ''
+  const [productImages, setProductImages] = useState<UploadedImage[]>(initialImages)
+
+  const initialCategoryId = (() => {
+    if (product.category_id) return product.category_id
+    if (product.category) {
+      const match = categories.find(
+        (c) => c.name.toLowerCase() === product.category?.toLowerCase()
+      )
+      if (match) return match.id
+    }
+    return ''
+  })()
 
   const {
     register,
@@ -102,6 +119,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
       name: product.name,
+      slug: product.slug,
       price: product.price,
       listPrice: product.list_price || undefined,
       description: product.description || '',
@@ -110,39 +128,38 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
     },
   })
 
-  const nameValue = watch('name')
+  const watchName = watch('name')
 
   useEffect(() => {
-    if (nameValue) setGeneratedSlug(slugify(nameValue))
-  }, [nameValue])
+    if (watchName && watchName !== product.name) {
+      setGeneratedSlug(slugify(watchName))
+    }
+  }, [watchName, product.name])
 
   const onSubmit = async (data: ProductFormData) => {
     setLoading(true)
     setError(null)
 
     try {
-      const slug = generatedSlug || slugify(data.name)
-      let finalSlug = product.slug
-
-      if (slug !== product.slug) {
-        const { data: existingProduct } = await supabase
+      let finalSlug = slugify(data.slug)
+      if (finalSlug !== product.slug) {
+        const { data: existing } = await supabase
           .from('products')
           .select('id')
           .eq('store_id', product.store_id)
-          .eq('slug', slug)
+          .eq('slug', finalSlug)
+          .neq('id', product.id)
           .maybeSingle()
-        finalSlug = existingProduct
-          ? `${slug}-${Math.floor(100 + Math.random() * 900)}`
-          : slug
+
+        if (existing) {
+          finalSlug = `${finalSlug}-${Date.now().toString().slice(-4)}`
+        }
       }
 
-      const primaryImage = productImages.find((img) => img.isPrimary)
-
-      // Récupérer le nom de la catégorie officielle
-      const selectedCat = categories.find(c => c.id === data.categoryId)
+      const primaryImage = productImages.find((img) => img.isPrimary) || productImages[0]
+      const selectedCat = categories.find((c) => c.id === data.categoryId)
       const categoryName = selectedCat ? selectedCat.name : null
 
-      // 1. Mettre à jour le produit avec category_id et category
       const { error: updateError } = await supabase
         .from('products')
         .update({
@@ -160,7 +177,6 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
 
       if (updateError) throw updateError
 
-      // 2. Remplacer toutes les images : supprimer puis réinsérer
       const { error: deleteImagesError } = await supabase
         .from('product_images')
         .delete()
@@ -216,10 +232,10 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {error && (
-          <div className="p-4 rounded-lg bg-danger/10 border border-danger/20 text-sm text-red-400">
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -227,10 +243,10 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Colonne Images */}
           <div className="md:col-span-1 space-y-4">
-            <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
               Images du produit
             </label>
-            <GlassCard className="p-4">
+            <GlassCard className="p-4 bg-white border border-slate-200 shadow-xs">
               <MultiImageUpload
                 folder="rohaty-shop/products"
                 images={productImages}
@@ -242,23 +258,23 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
 
           {/* Colonne Formulaire */}
           <div className="md:col-span-2 space-y-6">
-            <GlassCard className="p-6 space-y-5">
+            <GlassCard className="p-6 space-y-5 bg-white border border-slate-200 shadow-xs">
               {/* Nom */}
               <div>
-                <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                   Nom du produit *
                 </label>
                 <input
                   type="text"
                   placeholder="Ex: Sac en cuir marron"
                   {...register('name')}
-                  className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-hidden transition text-sm shadow-2xs"
                 />
                 {errors.name && (
-                  <p className="text-xs text-red-400 mt-1.5">{errors.name.message}</p>
+                  <p className="text-xs text-red-600 mt-1.5">{errors.name.message}</p>
                 )}
                 {generatedSlug && (
-                  <div className="flex items-center gap-1.5 text-xs text-text-muted mt-2 font-mono truncate">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2 font-mono truncate">
                     <Info className="w-3.5 h-3.5" />
                     <span>Slug : {generatedSlug}</span>
                   </div>
@@ -268,7 +284,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
               {/* Prix */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                     Prix de vente (DJF) *
                   </label>
                   <div className="relative">
@@ -276,24 +292,24 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                       type="number"
                       placeholder="Ex: 8500"
                       {...register('price')}
-                      className="w-full pl-4 pr-12 py-3 rounded-lg bg-bg-input border border-white/10 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm"
+                      className="w-full pl-4 pr-12 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-hidden transition text-sm shadow-2xs"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-secondary font-mono">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
                       DJF
                     </div>
                   </div>
                   {errors.price && (
-                    <p className="text-xs text-red-400 mt-1.5">{errors.price.message}</p>
+                    <p className="text-xs text-red-600 mt-1.5">{errors.price.message}</p>
                   )}
                 </div>
 
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                       Prix barré / d&apos;origine
                     </label>
                     <span title="Optionnel. Affiche un prix barré pour mettre en valeur une promotion.">
-                      <HelpCircle className="w-3.5 h-3.5 text-text-muted" />
+                      <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
                     </span>
                   </div>
                   <div className="relative">
@@ -301,73 +317,73 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                       type="number"
                       placeholder="Ex: 10000 (optionnel)"
                       {...register('listPrice')}
-                      className="w-full pl-4 pr-12 py-3 rounded-lg bg-bg-input border border-white/10 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm"
+                      className="w-full pl-4 pr-12 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-hidden transition text-sm shadow-2xs"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-secondary font-mono">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
                       DJF
                     </div>
                   </div>
                   {errors.listPrice && (
-                    <p className="text-xs text-red-400 mt-1.5">{errors.listPrice.message}</p>
+                    <p className="text-xs text-red-600 mt-1.5">{errors.listPrice.message}</p>
                   )}
                 </div>
               </div>
 
               {/* Catégorie Officielle */}
               <div>
-                <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                   Catégorie *
                 </label>
                 <select
                   {...register('categoryId')}
-                  className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm cursor-pointer"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-hidden transition text-sm cursor-pointer shadow-2xs"
                 >
-                  <option value="" disabled className="bg-slate-900 text-slate-400">
+                  <option value="" disabled className="text-slate-400">
                     Sélectionnez la catégorie du produit...
                   </option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-slate-900 text-white py-1">
+                    <option key={cat.id} value={cat.id} className="text-slate-900 py-1">
                       {cat.name}
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-text-muted mt-1.5">
+                <p className="text-[11px] text-slate-500 mt-1.5">
                   Sélectionnez la catégorie officielle correspondant au produit.
                 </p>
                 {errors.categoryId && (
-                  <p className="text-xs text-red-400 mt-1.5">{errors.categoryId.message}</p>
+                  <p className="text-xs text-red-600 mt-1.5">{errors.categoryId.message}</p>
                 )}
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-semibold tracking-widest uppercase text-text-secondary mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                   Description du produit
                 </label>
                 <textarea
                   placeholder="Détails du produit (taille, matière, couleurs disponibles...)"
                   rows={4}
                   {...register('description')}
-                  className="w-full px-4 py-3 rounded-lg bg-bg-input border border-white/10 text-white placeholder-text-muted focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] outline-none transition-all text-sm resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-hidden transition text-sm resize-none shadow-2xs"
                 />
                 {errors.description && (
-                  <p className="text-xs text-red-400 mt-1.5">{errors.description.message}</p>
+                  <p className="text-xs text-red-600 mt-1.5">{errors.description.message}</p>
                 )}
               </div>
 
               {/* Statut */}
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/5">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <input
                   type="checkbox"
                   id="isPublished"
                   {...register('isPublished')}
-                  className="w-4.5 h-4.5 rounded bg-bg-input border-white/10 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                  className="w-4.5 h-4.5 rounded text-[#2563EB] border-slate-300 focus:ring-[#2563EB] accent-[#2563EB] cursor-pointer"
                 />
                 <div className="cursor-pointer select-none">
-                  <label htmlFor="isPublished" className="block text-sm font-semibold text-white cursor-pointer">
+                  <label htmlFor="isPublished" className="block text-sm font-bold text-slate-900 cursor-pointer">
                     Publier immédiatement le produit
                   </label>
-                  <span className="block text-xs text-text-secondary mt-0.5">
+                  <span className="block text-xs text-slate-500 mt-0.5">
                     Si décoché, le produit sera enregistré comme brouillon et restera invisible sur votre boutique.
                   </span>
                 </div>
@@ -375,10 +391,10 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
             </GlassCard>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href="/dashboard/produits"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white hover:scale-[1.02] active:scale-[0.98] transition-all text-center"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-2xs text-center"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Retour
@@ -387,17 +403,16 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
               <button
                 type="button"
                 onClick={() => setIsDeleteDialogOpen(true)}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold bg-danger/10 hover:bg-danger/20 border border-danger/20 text-red-400 transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 transition shadow-2xs cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 Supprimer
               </button>
 
-              <GradientButton
+              <button
                 type="submit"
-                variant="primary"
-                className="flex-1 py-3.5"
                 disabled={loading}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#2563EB] hover:bg-[#1D4ED8] text-white transition shadow-xs disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -407,7 +422,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                 ) : (
                   'Enregistrer les modifications'
                 )}
-              </GradientButton>
+              </button>
             </div>
           </div>
         </div>
@@ -416,32 +431,37 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
       {/* Modal de suppression */}
       <Dialog.Root open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 rounded-2xl bg-bg-surface border border-white/10 shadow-2xl z-50 focus:outline-none">
-            <div className="flex items-center gap-3 text-red-400 mb-4">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-danger" />
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl z-50 space-y-4 focus:outline-hidden">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
-              <Dialog.Title className="text-lg font-bold text-white font-heading">
-                Supprimer le produit ?
-              </Dialog.Title>
+              <div>
+                <Dialog.Title className="text-base font-bold text-slate-900">
+                  Supprimer le produit ?
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-slate-500 mt-0.5">
+                  Cette action est irréversible.
+                </Dialog.Description>
+              </div>
             </div>
 
-            <Dialog.Description className="text-sm text-text-secondary leading-relaxed mb-6">
-              Êtes-vous sûr de vouloir supprimer <strong className="text-white">« {product.name} »</strong> ? Cette action est irréversible.
-            </Dialog.Description>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Êtes-vous sûr de vouloir supprimer définitivement <strong className="text-slate-900">&laquo; {product.name} &raquo;</strong> ?
+            </p>
 
             {deleteError && (
-              <div className="p-3 mb-4 rounded-lg bg-danger/10 border border-danger/20 text-xs text-red-400">
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600">
                 {deleteError}
               </div>
             )}
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-2">
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-white transition-colors"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
                 >
                   Annuler
                 </button>
@@ -451,7 +471,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-danger hover:bg-danger/90 text-white transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition"
               >
                 {isDeleting ? (
                   <>

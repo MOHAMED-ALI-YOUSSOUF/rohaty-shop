@@ -39,7 +39,7 @@ export async function compressImage(
 
 // Déduit le profil depuis le folder Cloudinary
 export function folderToProfile(folder: string): CompressionProfile {
-  if (folder.includes('logo')) return 'logo'
+  if (folder.includes('logo') || folder.includes('categories')) return 'logo'
   if (folder.includes('banner')) return 'banner'
   return 'product'
 }

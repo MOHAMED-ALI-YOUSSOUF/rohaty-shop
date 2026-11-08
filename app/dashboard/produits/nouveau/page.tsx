@@ -22,18 +22,18 @@ export default async function NouveauProduitPage() {
     .order('position', { ascending: true })
 
   return (
-    <div className="space-y-6 max-w-8xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans">
       <div>
         <Link
           href="/dashboard/produits"
-          className="inline-flex items-center gap-2 text-text-secondary hover:text-white mb-8"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 mb-4 transition"
         >
-          <ArrowLeft size={18} /> Retour aux produits
+          <ArrowLeft size={16} /> Retour aux produits
         </Link>
-        <h1 className="text-2xl md:text-3xl font-bold font-heading text-white">
+        <h1 className="text-2xl md:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
           Ajouter un produit
         </h1>
-        <p className="text-text-secondary text-xs mt-1">
+        <p className="text-slate-600 text-xs mt-1">
           Remplissez les informations ci-dessous pour publier un nouveau produit.
         </p>
       </div>

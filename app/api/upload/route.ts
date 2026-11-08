@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       'rohaty-shop/stores/logo',
       'rohaty-shop/stores/banner',
       'rohaty-shop/products',
+      'rohaty-shop/categories',
+      'rohaty-shop/banners',
     ]
 
     if (!allowedFolders.includes(folder)) {

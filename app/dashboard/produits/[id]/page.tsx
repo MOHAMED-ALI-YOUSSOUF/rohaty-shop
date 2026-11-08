@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, getCurrentStore } from '@/lib/supabase/dashboard-cache'
 import { EditProductForm } from './EditProductForm'
 import type { Category } from '@/lib/categories'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 interface ModifierProduitPageProps {
   params: Promise<{ id: string }>
@@ -50,12 +52,18 @@ export default async function ModifierProduitPage({
   if (!product) redirect('/dashboard/produits')
 
   return (
-    <div className="space-y-6 max-w-8xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold font-heading text-white">
+        <Link
+          href="/dashboard/produits"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 mb-4 transition"
+        >
+          <ArrowLeft size={16} /> Retour aux produits
+        </Link>
+        <h1 className="text-2xl md:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
           Modifier le produit
         </h1>
-        <p className="text-text-secondary text-xs mt-1">
+        <p className="text-slate-600 text-xs mt-1">
           Modifiez les détails de votre produit ci-dessous.
         </p>
       </div>

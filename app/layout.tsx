@@ -1,22 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import { GoogleAnalytics } from "@/components/shared/GoogleAnalytics";
 import { ServiceWorkerRegistration } from "@/components/shared/ServiceWorkerRegistration";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   themeColor: "#FFFFFF",
@@ -70,7 +55,6 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${spaceGrotesk.variable} ${inter.variable}`}
       data-scroll-behavior="smooth"
     >
       <head>

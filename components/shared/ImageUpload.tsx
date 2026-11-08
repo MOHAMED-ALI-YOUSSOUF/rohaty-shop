@@ -9,7 +9,12 @@ import { compressImage, folderToProfile } from '@/lib/compressImage'
 
 
 interface ImageUploadProps {
-  folder: 'rohaty-shop/stores/logo' | 'rohaty-shop/stores/banner' | 'rohaty-shop/products'
+  folder:
+    | 'rohaty-shop/stores/logo'
+    | 'rohaty-shop/stores/banner'
+    | 'rohaty-shop/products'
+    | 'rohaty-shop/categories'
+    | 'rohaty-shop/banners'
   currentUrl?: string | null
   onUpload: (url: string) => void
   onClear?: () => void
