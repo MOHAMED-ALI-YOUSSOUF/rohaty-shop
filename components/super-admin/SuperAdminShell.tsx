@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Layers,
   Image as ImageIcon,
+  BarChart3,
   Store,
   ShoppingBag,
   LogOut,
@@ -44,6 +45,11 @@ export function SuperAdminShell({
       icon: LayoutDashboard,
     },
     {
+      label: 'Statistiques & Trafic',
+      href: '/super-admin/analytics',
+      icon: BarChart3,
+    },
+    {
       label: 'Gestion des catégories',
       href: '/super-admin/categories',
       icon: Layers,
@@ -63,6 +69,7 @@ export function SuperAdminShell({
 
   const getBreadcrumbTitle = (path: string) => {
     if (path === '/super-admin') return 'Vue générale'
+    if (path === '/super-admin/analytics') return 'Statistiques & Trafic'
     if (path === '/super-admin/categories') return 'Gestion des catégories'
     if (path === '/super-admin/banners') return 'Gestion des bannières'
     return 'Super Admin'

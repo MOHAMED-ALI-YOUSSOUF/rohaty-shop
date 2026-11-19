@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
+import { trackWhatsAppClick } from "@/lib/analytics";
 
 interface Product {
   id: string;
@@ -128,6 +129,14 @@ export function ProductCard({
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => {
+            trackWhatsAppClick({
+              storeSlug,
+              productId: product.id,
+              productName: product.name,
+              source: "store_card",
+            });
+          }}
           className="w-full py-1.5 rounded text-[10px] font-bold text-white text-center cursor-pointer mt-auto active:scale-95 transition-transform"
           style={{ backgroundColor: "#10B981" }}
         >

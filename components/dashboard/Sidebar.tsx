@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   ShoppingBag,
+  BarChart3,
   Store,
   Palette,
   ExternalLink,
@@ -36,6 +37,11 @@ export function Sidebar({ storeName, storeSlug, className, onCloseMobile }: Side
       label: 'Mes produits',
       href: '/dashboard/produits',
       icon: ShoppingBag,
+    },
+    {
+      label: 'Statistiques',
+      href: '/dashboard/statistiques',
+      icon: BarChart3,
     },
     {
       label: 'Ma boutique',

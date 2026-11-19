@@ -137,8 +137,8 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
       } as React.CSSProperties}
       className="min-h-screen flex flex-col font-sans"
     >
-      {/* Google Analytics — tracking par boutique */}
-      <StoreAnalytics slug={store.slug} name={store.name} />
+      {/* Analytics — tracking par boutique */}
+      <StoreAnalytics id={store.id} slug={store.slug} name={store.name} />
 
       {/* Header de la boutique */}
       <StoreHeader

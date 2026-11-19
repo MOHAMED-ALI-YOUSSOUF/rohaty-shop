@@ -7,6 +7,7 @@ import { useEffect, useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { trackProductView, trackWhatsAppClick } from "@/lib/analytics";
 
 export interface SheetProduct {
   id: string;
@@ -207,11 +208,21 @@ export function MarketplaceProductSheet({
     };
   }, [product, onClose]);
 
-  // Focus sur le bouton de fermeture à l'ouverture
+  // Focus sur le bouton de fermeture à l'ouverture + suivi de vue produit
   useEffect(() => {
-    if (product && sheetRef.current) {
-      const closeBtn = sheetRef.current.querySelector<HTMLElement>("[data-close]");
-      closeBtn?.focus();
+    if (product) {
+      if (sheetRef.current) {
+        const closeBtn = sheetRef.current.querySelector<HTMLElement>("[data-close]");
+        closeBtn?.focus();
+      }
+      trackProductView({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        storeSlug: product.storeSlug,
+        source: "marketplace_sheet",
+      });
     }
   }, [product]);
 
@@ -340,6 +351,14 @@ export function MarketplaceProductSheet({
                   href={product.whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => {
+                    trackWhatsAppClick({
+                      productId: product.id,
+                      productName: product.name,
+                      storeSlug: product.storeSlug,
+                      source: "marketplace_sheet",
+                    });
+                  }}
                   className="
                     flex items-center justify-center gap-2
                     w-full py-3.5 rounded-xl

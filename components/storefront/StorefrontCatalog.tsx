@@ -9,6 +9,7 @@
 import { useState, useMemo } from 'react'
 import { ProductCard } from './ProductCard'
 import { cn } from '@/lib/utils'
+import { trackCategoryView } from '@/lib/analytics'
 
 interface Product {
   id: string
@@ -105,7 +106,12 @@ export function StorefrontCatalog({
                 return (
                   <button
                     key={cat}
-                    onClick={() => setActiveCategory(isActive ? '' : cat)}
+                    onClick={() => {
+                      if (!isActive) {
+                        trackCategoryView({ name: cat, slug: cat.toLowerCase() })
+                      }
+                      setActiveCategory(isActive ? '' : cat)
+                    }}
                     className="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap snap-start transition-all duration-200"
                     style={
                       isActive

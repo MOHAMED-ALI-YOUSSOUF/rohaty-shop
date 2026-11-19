@@ -12,6 +12,7 @@ import { StoreHeader } from '@/components/storefront/StoreHeader'
 import { ProductGrid } from '@/components/storefront/ProductGrid'
 import { ProductImageGallery } from '@/components/storefront/ProductImageGallery'
 import { GradientButton } from '@/components/shared/GradientButton'
+import { ProductViewTracker, ProductWhatsAppOrderButton } from '@/components/storefront/ProductAnalytics'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { getTheme } from '@/lib/store-themes'
 import { ChevronRight, Info } from 'lucide-react'
@@ -167,6 +168,16 @@ export default async function PublicProductPage({ params }: ProductPageParams) {
 
 
       <main className="flex-1 w-full pb-6">
+        {/* Tracker d'analytics produit */}
+        <ProductViewTracker
+          id={product.id}
+          name={product.name}
+          price={product.price}
+          category={product.category}
+          storeId={store.id}
+          storeSlug={store.slug}
+        />
+
         {/* Fil d'ariane */}
         <div
           className="px-3 sm:px-6 lg:px-8 py-2.5 flex items-center gap-1 text-[10px] sm:text-xs overflow-x-auto no-scrollbar"
@@ -240,14 +251,16 @@ export default async function PublicProductPage({ params }: ProductPageParams) {
               )}
 
               <div className="pt-4">
-                <GradientButton
-                  variant="whatsapp"
+                <ProductWhatsAppOrderButton
                   href={whatsappOrderUrl}
-                  target="_blank"
+                  productId={product.id}
+                  productName={product.name}
+                  storeId={store.id}
+                  storeSlug={store.slug}
                   className="w-full py-3 font-bold"
                 >
                   💬 Commander via WhatsApp
-                </GradientButton>
+                </ProductWhatsAppOrderButton>
                 <div
                   className="flex items-center gap-2 text-[10px] mt-2"
                   style={{ color: secondaryTextColor }}

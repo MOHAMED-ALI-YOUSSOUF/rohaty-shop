@@ -29,6 +29,7 @@ export function Header({ fullName, storeSlug, onMenuClick }: HeaderProps) {
     if (path === '/dashboard/produits') return 'Mes produits'
     if (path === '/dashboard/produits/nouveau') return 'Nouveau produit'
     if (path.startsWith('/dashboard/produits/') && path !== '/dashboard/produits/nouveau') return 'Modifier le produit'
+    if (path === '/dashboard/statistiques') return 'Statistiques'
     if (path === '/dashboard/boutique') return 'Paramètres boutique'
     if (path === '/dashboard/apparence') return 'Apparence et Thème'
     return 'Tableau de bord'

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { GoogleAnalytics } from "@/components/shared/GoogleAnalytics";
+import { AnalyticsTracker } from "@/components/shared/AnalyticsTracker";
 import { ServiceWorkerRegistration } from "@/components/shared/ServiceWorkerRegistration";
 
 export const viewport: Viewport = {
@@ -71,6 +72,7 @@ export default function RootLayout({
       </head>
       <body className="bg-white text-slate-900 antialiased">
         <GoogleAnalytics />
+        <AnalyticsTracker />
         <ServiceWorkerRegistration />
         {children}
       </body>

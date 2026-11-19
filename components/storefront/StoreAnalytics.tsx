@@ -2,32 +2,25 @@
 'use client'
 
 import { useEffect } from 'react'
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void
-  }
-}
+import { trackStoreView } from '@/lib/analytics'
 
 interface StoreAnalyticsProps {
+  id?: string
   slug: string
   name: string
 }
 
 /**
- * Envoie un custom event GA4 "view_store" dès que la boutique est visitée.
- * Cela permet de voir les visites par boutique dans Google Analytics :
- * Explorer → Events → view_store → filtrer par store_slug.
+ * Envoie l'événement "view_store" vers Google Analytics 4 et la table Supabase analytics_events.
  */
-export function StoreAnalytics({ slug, name }: StoreAnalyticsProps) {
+export function StoreAnalytics({ id, slug, name }: StoreAnalyticsProps) {
   useEffect(() => {
-    if (typeof window.gtag === 'function') {
-      window.gtag('event', 'view_store', {
-        store_slug: slug,
-        store_name: name,
-      })
-    }
-  }, [slug, name])
+    trackStoreView({
+      id: id || '',
+      slug,
+      name,
+    })
+  }, [id, slug, name])
 
   return null
 }

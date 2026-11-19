@@ -28,6 +28,7 @@ import {
   getCategoryVisual,
   DEFAULT_OFFICIAL_CATEGORIES,
 } from "@/lib/categories";
+import { trackCategoryView, trackSearch } from "@/lib/analytics";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -175,8 +176,33 @@ export function MarketplacePage({
   const shown = filtered.slice(0, visible);
   const hasFilter = !!activeCategorySlug || !!search.trim();
 
+  // Suivi de la recherche marketplace (débouncé à 1.2s)
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    const trimmed = search.trim();
+    if (!trimmed) return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      trackSearch(trimmed, filtered.length);
+    }, 1200);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [search, filtered.length]);
+
   const handleSelectCategory = (slug: string) => {
-    setActiveCategorySlug((prev) => (prev === slug ? "" : slug));
+    setActiveCategorySlug((prev) => {
+      const next = prev === slug ? "" : slug;
+      if (next) {
+        const cat = officialCategories.find((c) => c.slug === next);
+        trackCategoryView({
+          id: cat?.id,
+          name: cat?.name,
+          slug: next,
+        });
+      }
+      return next;
+    });
     setVisible(PAGE_SIZE);
   };
 
